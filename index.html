@@ -101,7 +101,7 @@ body{padding:calc(env(safe-area-inset-top) + 10px) calc(var(--tabw) + env(safe-a
 #book{position:relative;perspective:2200px}
 #page{position:relative;background:#fffcfa;border-radius:10px 4px 4px 10px;padding:6px 14px 20px 34px;min-height:calc(100vh - 40px);
  box-shadow:0 0 0 1px #f1e3ea,4px 0 0 #fbf3f6,7px 0 0 #f1e3ea,9px 1px 0 #faf1f5,12px 2px 0 #eedfe7,6px 10px 30px #b48aa52e;
- background-image:linear-gradient(90deg,transparent 0 22px,#f6dbe6 22px 23.5px,transparent 23.5px)}
+ background-image:linear-gradient(90deg,transparent 0 22px,#f6dbe6 22px 23.5px,transparent 23.5px),linear-gradient(#ebe4f1 1px,transparent 1px),linear-gradient(90deg,#ebe4f1 1px,transparent 1px);background-size:100% 100%,5mm 5mm,5mm 5mm;background-position:0 0,-1px -1px,-1px -1px}
 #page::before{content:'';position:absolute;left:5px;top:18px;bottom:18px;width:12px;
  background:radial-gradient(circle at 6px 6px,#efe2ea 0 4px,#d9c5d2 4px 5px,transparent 5.5px) 0 0/12px 34px}
 .tabs{position:fixed;top:calc(env(safe-area-inset-top) + 24px);right:env(safe-area-inset-right);width:var(--tabw);bottom:12px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;overflow-x:visible;padding:0;background:none;backdrop-filter:none;z-index:10;scrollbar-width:none}
@@ -230,7 +230,7 @@ body.sober .dot{filter:saturate(.8)}
 body.sober footer{color:#7f7680}
 /* Mode nuit : mêmes éléments décoratifs qu'en mode jour, couleurs adaptées */
 body.sober{background-color:#1d1a1f;background-image:radial-gradient(#2f2932 1.1px,transparent 1.2px),linear-gradient(180deg,#221d24 0%,#1d1a1f 30%,#1f1b24 100%);background-size:20px 20px,100% 100%;background-attachment:fixed}
-body.sober #page{background-color:#252128;background-image:linear-gradient(90deg,transparent 0 22px,#5a3a4a 22px 23.5px,transparent 23.5px);
+body.sober #page{background-color:#252128;background-image:linear-gradient(90deg,transparent 0 22px,#5a3a4a 22px 23.5px,transparent 23.5px),linear-gradient(#302a34 1px,transparent 1px),linear-gradient(90deg,#302a34 1px,transparent 1px);background-size:100% 100%,5mm 5mm,5mm 5mm;background-position:0 0,-1px -1px,-1px -1px;
  box-shadow:0 0 0 1px #37303a,4px 0 0 #221e25,7px 0 0 #37303a,9px 1px 0 #211d23,12px 2px 0 #332c36,6px 10px 30px #00000059}
 body.sober .turn{box-shadow:0 0 0 1px #37303a}
 body.sober .card::before{display:block;opacity:.7;background:repeating-linear-gradient(45deg,#8a4d66 0 7px,#6b3d51 7px 14px);box-shadow:0 1px 2px #0000004d}
