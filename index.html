@@ -13,7 +13,9 @@
 :root{--pink:#f2a7c3;--lav:#c9b3f5;--ink:#3a2f3d;--mut:#8a7f8c;--card:#fff;--soft:#f7f0f8;--grad:linear-gradient(90deg,#f2a7c3,#c9b3f5)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;font-family:-apple-system,system-ui,sans-serif;color:var(--ink);background:linear-gradient(180deg,#fdf1f5,#f3eefc);min-height:100vh;padding:env(safe-area-inset-top) 14px 40px}
-header{padding:18px 6px 6px}.kick{color:#c98aa8;font-weight:800;letter-spacing:2px;font-size:12px}
+header{padding:18px 6px 6px}
+.netst{display:inline-flex!important;align-items:center;gap:5px;margin-right:6px;padding:6px 7px!important;flex:0 0 auto!important;width:auto!important}.netst svg{display:block}.netst .ok{color:#4f9a6e}.netst .ko{color:#c0574f}.netst .no{color:#a99aa4}
+.neti{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:#f7eef2}.neti svg{display:block}.neti.ok{color:#4f9a6e}.neti.ko{color:#c0574f}.neti.no{color:#a99aa4}body.sober .neti{background:#322c35}.kick{color:#c98aa8;font-weight:800;letter-spacing:2px;font-size:12px}
 h1{margin:6px 0;font-size:32px}.sub{color:var(--mut);margin:0 0 10px}
 .tabs{display:flex;gap:8px;overflow-x:auto;padding:8px 2px 12px;position:sticky;top:0;z-index:5;background:linear-gradient(#fdf1f5ee,#fdf1f5cc);backdrop-filter:blur(8px)}
 .tab{flex:0 0 auto;border:0;background:#fff;border-radius:18px;padding:10px 14px;font-weight:700;color:var(--ink);box-shadow:0 2px 8px #c9b3f522;font-size:14px}
@@ -222,7 +224,7 @@ body.sober footer{color:#7f7680}
 footer{text-align:center;color:var(--mut);font-size:12px;margin-top:20px}
 </style></head><body>
 <div id="book"><div id="page">
-<header><div class="row"><div class="kick">✨ MON DAILY PLANNER</div><span class="sp"></span><button class="btn s" onclick="searchSheet()" style="margin-right:6px">🔍</button><button class="btn s modebtn" id="modeBtn" onclick="toggleSober()">🌙 Mode sobre</button></div><h1 id="ttl">Mon récap 🌷</h1>
+<header><div class="row"><div class="kick">✨ MON DAILY PLANNER</div><span class="sp"></span><button class="btn s" onclick="searchSheet()" style="margin-right:6px">🔍</button><button class="btn s netst" id="statBtn" onclick="statInfo()" aria-label="État de la connexion"></button><button class="btn s modebtn" id="modeBtn" onclick="toggleSober()">🌙 Mode sobre</button></div><h1 id="ttl">Mon récap 🌷</h1>
 </header>
 <main id="app"></main>
 <footer>Daily Journal · tes données restent dans ce navigateur. Pense à sauvegarder 💾</footer>
@@ -772,8 +774,20 @@ function syncInner(){const t=SY.last?new Date(SY.last).toLocaleString('fr-FR',{d
   if(SY.err&&SY.st!=='err')h+=`<div class="alert" style="margin-top:10px">${esc(SY.err)}</div>`;return h}
 const EYE='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',EYE_OFF='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block"><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-2.6 3.5"/><path d="M6.6 6.6C3.7 8.4 2 12 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M2 2l20 20"/></svg>';
 function syncTogglePw(){SY.showPw=!SY.showPw;syncUI();const el=document.getElementById('sy_pw');if(el){el.focus();try{const n=el.value.length;el.setSelectionRange(n,n)}catch(e){}}}
+const CLOUD_ON='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19H7a5 5 0 1 1 .9-9.9A6 6 0 0 1 19.5 11a4 4 0 0 1-2 8z"/><path d="M9 14l2 2 4-4"/></svg>',CLOUD_OFF='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20"/><path d="M5.8 9.4A5 5 0 0 0 7 19h10.5c.6 0 1.2-.1 1.7-.4"/><path d="M21.3 15.6A4 4 0 0 0 19.5 11a6 6 0 0 0-9.3-4.9"/></svg>',WIFI_ON='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 8.8a15 15 0 0 1 20 0"/><path d="M5 12.6a10 10 0 0 1 14 0"/><path d="M8.5 16.4a5 5 0 0 1 7 0"/><path d="M12 20h.01"/></svg>',WIFI_OFF='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20"/><path d="M8.5 16.4a5 5 0 0 1 7 0"/><path d="M5 12.6a10 10 0 0 1 4.2-2.4"/><path d="M19 12.6a10 10 0 0 0-2.2-1.6"/><path d="M2 8.8a15 15 0 0 1 4.2-2.7"/><path d="M10.7 5.1A15 15 0 0 1 22 8.8"/><path d="M12 20h.01"/></svg>';
+function statUI(){const b=document.getElementById('statBtn');if(!b)return;const on=navigator.onLine!==false,acc=SY.st==='on';
+  b.innerHTML=`<span class="${acc?'ok':'no'}" title="${acc?'Compte connecté':'Compte non connecté'}">${acc?CLOUD_ON:CLOUD_OFF}</span><span class="${on?'ok':'ko'}" title="${on?'En ligne':'Hors ligne'}">${on?WIFI_ON:WIFI_OFF}</span>`;
+  b.setAttribute('aria-label',(acc?'Compte connecté':'Compte non connecté')+', '+(on?'en ligne':'hors ligne'))}
+function statInfo(){const on=navigator.onLine!==false,acc=SY.st==='on';
+  openSheet(`<div style="text-align:center"><h3>Connexion</h3>
+  <div class="row" style="justify-content:center;gap:10px;margin:6px 0"><span class="neti ${acc?'ok':'no'}">${acc?CLOUD_ON:CLOUD_OFF}</span><b>${acc?'Compte connecté':'Compte non connecté'}</b></div>
+  <div class="mut">${acc?'Connecté·e avec '+esc(SY.user.email||'')+'. Tes données se synchronisent.':'Tes données restent sur cet appareil. Connecte-toi pour les synchroniser.'}</div>
+  <div class="row" style="justify-content:center;gap:10px;margin:14px 0 6px"><span class="neti ${on?'ok':'ko'}">${on?WIFI_ON:WIFI_OFF}</span><b>${on?'En ligne':'Hors ligne'}</b></div>
+  <div class="mut">${on?'Internet fonctionne.':'Pas d’internet : tes modifications sont gardées et seront envoyées au retour de la connexion.'}</div>
+  <div class="fbtns"><button class="btn" style="flex:1" onclick="closeSheet()">Fermer</button>${acc?'':'<button class="btn p" style="flex:1" onclick="closeSheet();go(\'Réglages\');setTimeout(()=>{const c=document.getElementById(\'syncCard\');if(c)c.scrollIntoView({behavior:\'smooth\',block:\'center\'})},350)">Me connecter</button>'}</div></div>`)}
+addEventListener('offline',statUI);addEventListener('online',statUI);
 const syncCard=()=>`<div class="card" id="syncCard">${syncInner()}</div>`;
-function syncUI(){const el=document.getElementById('syncCard');
+function syncUI(){statUI();const el=document.getElementById('syncCard');
   if(el){const v=[syncVal('sy_em'),syncVal('sy_pw')];el.innerHTML=syncInner();const e2=document.getElementById('sy_em'),p2=document.getElementById('sy_pw');if(e2&&v[0])e2.value=v[0];if(p2&&v[1])p2.value=v[1]}
   const f=document.querySelector('footer');if(f)f.textContent=SY.st==='on'?'Daily Journal · tes données sont synchronisées ☁️':'Daily Journal · tes données restent dans ce navigateur. Pense à sauvegarder 💾'}
 function resetAll(){if(!confirm(SY.st==='on'?'Tout effacer, sur cet appareil ET sur tes autres appareils ? Pense à sauvegarder avant.':'Tout effacer ? Pense à sauvegarder avant.'))return;
@@ -785,5 +799,5 @@ render();
 try{const y=+sessionStorage.getItem('maSemaine_y');sessionStorage.removeItem('maSemaine_y');if(y)setTimeout(()=>scrollTo(0,y),50)}catch(e){}
 window.MS_BOOT=1;
 if(lsg('maSemaine_forcePush')){lss('maSemaine_forcePush',null);save()}
-syncInit();
+statUI();syncInit();
 </script></body></html>
