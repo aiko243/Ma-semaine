@@ -93,7 +93,6 @@ h1{font-family:var(--hand);font-size:50px;font-weight:700;line-height:1;margin:4
 .stick{position:absolute;font-size:30px;filter:drop-shadow(1px 2px 1px #0002)}
 .rline{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1.5px dashed #f0dfe8}.rline:last-child{border:0}
 .rline .tt{flex:1}.rline.done .tt{text-decoration:line-through;color:var(--mut)}
-.lined{background-image:repeating-linear-gradient(transparent 0 33px,#f3dbe6 33px 34px)}
 .lbl{display:inline-block;font-family:var(--note);background:#fff;border:1.5px solid #f2c4d8;border-radius:3px;padding:2px 10px;transform:rotate(-2deg);color:#b0446f;font-size:13px;font-weight:700}
 /* ===== Journal + répertoire ===== */
 :root{--tabw:50px}
@@ -297,6 +296,14 @@ function stickerCard(ds,title,key='stk'){const on=S.stk[ds]||[],mine=stkOf(ds);
   ${stkEdit?'<button class="stk add" onclick="addStk()"><span class="se">＋</span><span class="sn">Nouveau</span></button>':''}</div></div>`}
 const stkLine=(ds,cls)=>{const l=stkOf(ds);return l.length?`<div class="${cls}">${l.map(d=>`<span title="${esc(d.n)}">${esc(d.e)}</span>`).join('')}</div>`:''};
 if(!S.sub)S.sub={};if(!S.tpl)S.tpl=[];if(!S.lastDone)S.lastDone={};if(!S.wishCfg)S.wishCfg={wait:7};if(!S.bud)S.bud={tx:[],fixed:[],limits:{}};if(!S.wish)S.wish=[];if(!S.created)S.created=Date.now();
+/* États propres à chaque appareil : ne voyagent plus avec la synchro */
+let FOLD=(()=>{try{return JSON.parse(localStorage.getItem('maSemaine_fold')||'null')}catch(e){return null}})();if(!FOLD){FOLD=S.fold||{};try{localStorage.setItem('maSemaine_fold',JSON.stringify(FOLD))}catch(e){}}
+const saveFold=()=>{try{localStorage.setItem('maSemaine_fold',JSON.stringify(FOLD))}catch(e){}};
+let NOTIF=(()=>{try{return JSON.parse(localStorage.getItem('maSemaine_notified')||'{}')}catch(e){return{}}})();
+/* Ménage des données qui grossissaient sans servir */
+delete S.fold;delete S.notified;
+if(S.hist&&S.hist.length)S.hist=S.hist.filter(h=>h.real!=null).slice(0,300);
+(()=>{const lim=(()=>{const d=new Date();d.setDate(d.getDate()-90);return d.toISOString().slice(0,10)})();for(const k in S.sub){const ds=k.split('|')[1];if(ds!=='x'&&ds<lim)delete S.sub[k]}})();
 const save=()=>{if(window.MS_BOOT){S._mt=Date.now();try{localStorage.setItem('maSemaine_dirty','1')}catch(e){}}localStorage.setItem(K,JSON.stringify(S));try{syncPush()}catch(e){}try{if(UNDO&&Date.now()-lastSnap>400){UNDO=null;const el=document.getElementById('toast');if(el)el.classList.remove('show')}}catch(e){}};
 const CATS=['Perso','Maison','Administratif','Sport','Chat'];
 const JOURS=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
@@ -327,7 +334,7 @@ function occurs(t,ds){
   return false}
 const tasksOn=ds=>S.tasks.filter(t=>occurs(t,ds)).sort((a,b)=>((b.prio?1:0)-(a.prio?1:0))||((a.time||'99')<(b.time||'99')?-1:(a.time||'99')>(b.time||'99')?1:0));
 const isDone=(t,ds)=>!!S.done[t.id+'|'+ds];
-function toggle(id,ds){const k=id+'|'+ds;if(!S.done[k])snap('Tâche cochée ✓');{const t0=S.tasks.find(x=>x.id==id);if(t0&&t0.cat==='Maison'&&!S.done[k]){const kk=t0.title.trim().toLowerCase();if(!S.lastDone[kk]||S.lastDone[kk]<ds)S.lastDone[kk]=ds}}if(S.done[k]){delete S.done[k];S.stars=Math.max(0,S.stars-1)}else{S.done[k]=Date.now();S.stars++;const t=S.tasks.find(x=>x.id==id);S.hist.unshift({t:t.title,d:Date.now(),est:t.dur,real:null})}save();render()}
+function toggle(id,ds){const k=id+'|'+ds;if(!S.done[k])snap('Tâche cochée ✓');{const t0=S.tasks.find(x=>x.id==id);if(t0&&t0.cat==='Maison'&&!S.done[k]){const kk=t0.title.trim().toLowerCase();if(!S.lastDone[kk]||S.lastDone[kk]<ds)S.lastDone[kk]=ds}}if(S.done[k]){delete S.done[k];S.stars=Math.max(0,S.stars-1)}else{S.done[k]=Date.now();S.stars++;const t=S.tasks.find(x=>x.id==id)}save();render()}
 
 function openSheet(html){let el=document.getElementById('sheet');if(!el){el=document.createElement('div');el.id='sheet';el.onclick=e=>{if(e.target===el)closeSheet()};document.body.appendChild(el)}
   el.innerHTML=`<div class="pan"><div class="grab"></div>${html}</div>`;el.classList.add('open');const f=el.querySelector('[autofocus]');if(f)setTimeout(()=>f.focus(),60)}
@@ -385,9 +392,6 @@ function taskRow(t,ds,opts=''){
   ${!dn?`<button class="btn s" onclick="startFocus(${t.id},'${ds||TODAY()}')">🎯 Focus</button>`:''}${ds&&!dn&&!t.recur?`<button class="btn s" onclick="postpone(${t.id})">${t.date<=TODAY()?'➡️ Demain':'➡️ +1 jour'}</button>`:''}${opts}
   <button class="btn s" onclick="editTask(${t.id})">Modifier</button></div></div></div>`}
 
-function progressCard(ds){const l=tasksOn(ds),d=l.filter(t=>isDone(t,ds)).length,p=l.length?Math.round(d/l.length*100):0;
-  return `<div class="card"><div class="row"><div><h2 style="margin:0">${p===100&&l.length?'Bravo ! 🎉':'Tu avances !'}</h2><div class="mut">${d} tâches sur ${l.length} terminées</div></div><span class="sp"></span><b style="font-size:30px">${p}%</b></div>
-  <div class="bar" style="margin:12px 0 6px"><i style="width:${p}%"></i></div><div class="row mut"><span>${l.length-d} restantes</span><span class="sp"></span><span>⭐ ${S.stars} étoiles</span></div></div>`}
 const MSG=['Une étape à la fois ! ✨','Même 5 minutes, ça compte 💗','Tu fais de ton mieux, et c\'est déjà beaucoup 🌸','Petit pas aujourd\'hui, grande fierté demain 🌷'];
 
 function routineLine(t,ds){const dn=isDone(t,ds),st=streak(t);
@@ -468,7 +472,7 @@ function searchRun(q){q=norm(q).trim();const el=document.getElementById('sres');
   S.postits.forEach(n=>{if(norm(n.t).includes(q))r.push(['💖',n.t.split('\n')[0].slice(0,50),'Post-it',`openRes('p',${n.id})`])});
   (S.bud.tx||[]).forEach(x=>{if(norm(x.note).includes(q)||norm(x.cat).includes(q))r.push(['💶',(x.note||x.cat),fr(x.d)+' · '+eur(x.amt),`openRes('b',${x.id})`])});
   el.innerHTML=r.length?r.slice(0,40).map(x=>`<button class="sr" onclick="${x[3]}"><span style="font-size:20px">${x[0]}</span><span class="sp"><b>${esc(x[1])}</b><small>${esc(x[2])}</small></span></button>`).join(''):'<p class="mut">Rien trouvé 🌸</p>'}
-function goOpen(t,k){if(!S.fold)S.fold={};if(k){S.fold[k]=1;save()}closeSheet();if(tab===t)render();else go(t)}
+function goOpen(t,k){if(k){FOLD[k]=1;saveFold()}closeSheet();if(tab===t)render();else go(t)}
 function openRes(k,id){if(k==='t'){const t=S.tasks.find(x=>x.id==id);if(t.recur)goOpen('To-do','rout');else if(t.date){curDay=t.date;goOpen('Accueil','acc-todo')}else goOpen('To-do',t.cat==='Maison'?'todo-men':'todo-gen')}
   else if(k==='w')goOpen('Budget','ach-wish');else if(k==='p')goOpen('Accueil','acc-pi');else if(k==='b'){const x=S.bud.tx.find(y=>y.id==id);budMonth=x.d.slice(0,7);goOpen('Budget','bud-ops')}}
 function copyDay(){dateSheet('Copier vers quel jour ?',add(curDay,1),to=>{S.tasks.filter(t=>!t.recur&&t.date===curDay).forEach(t=>S.tasks.push({...t,id:uid(),date:to,subs:(t.subs||[]).map(x=>({...x}))}));save();curDay=to;render()})}
@@ -500,7 +504,6 @@ function vTodo(){const td=TODAY(),one=S.tasks.filter(t=>!t.recur&&(!t.date||t.da
   <div class="fl" style="margin-top:10px">À prévoir, du plus urgent au moins urgent</div><div class="mchips">${menageChips(have)}</div><div class="mut" style="margin:4px 0 6px">« + » l'ajoute à ta liste, « ✓ » note que tu viens de le faire. Ce qui est en rose commence à dater.</div>
   ${M.h||'<p class="mut">Rien à faire côté ménage pour l\'instant ✨</p>'}</div>${routinesCard()}`}
 function streak(t){let n=0,ds=TODAY();if(!isDone(t,ds))ds=add(ds,-1);for(let i=0;i<400;i++){if(occurs(t,ds)){if(isDone(t,ds))n++;else break}if(ds<t.recur.start)break;ds=add(ds,-1)}return n}
-function streakTop(){const r=S.tasks.filter(t=>t.recur).map(t=>[t,streak(t)]).sort((a,b)=>b[1]-a[1]);return r.length&&r[0][1]?`<p>🔥 Meilleure série : <b>${esc(r[0][0].title)}</b>, ${r[0][1]} fois d'affilée</p>`:''}
 const FREQ=t=>({daily:'Tous les jours',weekly:'Chaque '+t.recur.days.map(d=>JOURS[d]).join(', '),biweekly:'Une semaine sur deux · '+t.recur.days.map(d=>JOURS[d]).join(', '),monthly:'Le '+P(t.recur.start).getDate()+' de chaque mois',every:'Tous les '+(t.recur.n||2)+' jours'}[t.recur.type]);
 function routinesCard(){const l=S.tasks.filter(t=>t.recur),ds=TODAY();
   return `<div class="card"${FA('rout',l.length?l.length+' routine'+(l.length>1?'s':'')+' · '+firstTitles(l,3):'Pas encore de routine')}><div class="row"><h2 style="margin:0">🔁 Mes routines</h2><span class="sp"></span><button class="btn p" onclick="newRoutine()">+ Ajouter</button></div>
@@ -514,17 +517,17 @@ function notify(title,body){try{if(!('Notification' in window)||Notification.per
 async function askNotif(){if(!('Notification' in window)){alert('Pour les alertes, ouvre l\'appli depuis son icône sur l\'écran d\'accueil (pas depuis Safari).');return}
   const r=await Notification.requestPermission();render();if(r==='granted')notify('C\'est activé 🌷','Tu recevras tes rappels ici.')}
 const notifState=()=>!('Notification' in window)?'indispo':Notification.permission;
-function checkReminders(){try{if(notifState()!=='granted')return;const ds=TODAY(),now=new Date(),nm=now.getHours()*60+now.getMinutes();S.notified=S.notified||{};
+function checkReminders(){try{if(notifState()!=='granted')return;const ds=TODAY(),now=new Date(),nm=now.getHours()*60+now.getMinutes();let ch=false;
   tasksOn(ds).forEach(t=>{if(!t.time||isDone(t,ds))return;const[a,b]=t.time.split(':').map(Number),st=a*60+b;
-    [[10,'Dans 10 min'],[0,'C\'est l\'heure']].forEach(([m,l])=>{const k=t.id+'|'+ds+'|'+m;if(!S.notified[k]&&nm>=st-m&&nm<st-m+5){S.notified[k]=1;notify(l+' : '+t.title,(t.dur?t.dur+' min · ':'')+t.cat)}})});
-  for(const k in S.notified)if(!k.includes(ds))delete S.notified[k];save()}catch(e){}}
+    [[10,'Dans 10 min'],[0,'C\'est l\'heure']].forEach(([m,l])=>{const k=t.id+'|'+ds+'|'+m;if(!NOTIF[k]&&nm>=st-m&&nm<st-m+5){NOTIF[k]=1;ch=true;notify(l+' : '+t.title,(t.dur?t.dur+' min · ':'')+t.cat)}})});
+  for(const k in NOTIF)if(!k.includes(ds)){delete NOTIF[k];ch=true}if(ch)try{localStorage.setItem('maSemaine_notified',JSON.stringify(NOTIF))}catch(e){}}catch(e){}}
 setInterval(checkReminders,30000);setTimeout(checkReminders,3000);
 let F={id:null,ds:null,left:0,run:false,start:null,iv:null};
 function startFocus(id,ds){const t=S.tasks.find(x=>x.id==id);clearInterval(F.iv);F={id,ds,left:t.dur?t.dur*60:0,up:!t.dur,run:true,start:Date.now(),iv:null};F.iv=setInterval(tick,1000);go('Focus')}
 function tick(){if(!F.run)return;if(F.up){F.left++}else{F.left--;}if(!F.up&&F.left<=0){F.left=0;F.run=false;try{navigator.vibrate&&navigator.vibrate(400)}catch(e){}notify('⏰ Temps écoulé','Tu as terminé « '+((S.tasks.find(x=>x.id==F.id)||{}).title||'ta tâche')+' » ?');alert('⏰ Temps écoulé ! Tu as terminé ?')}const el=document.getElementById('tm');if(el)el.textContent=fmt(F.left)}
 const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
 function focusDone(){const t=S.tasks.find(x=>x.id==F.id);if(!t)return;const real=Math.round((Date.now()-F.start)/60000);
-  if(!isDone(t,F.ds)){S.done[t.id+'|'+F.ds]=Date.now();S.stars+=2;S.hist.unshift({t:t.title,d:Date.now(),est:t.dur,real})}
+  if(!isDone(t,F.ds)){S.done[t.id+'|'+F.ds]=Date.now();S.stars+=2;S.hist.unshift({t:t.title,d:Date.now(),est:t.dur,real});S.hist.length=Math.min(S.hist.length,300)}
   clearInterval(F.iv);F={id:null};save();alert('Bravo ! 🎉 +2 étoiles');go('Accueil')}
 function flemme(){const ds=TODAY(),l=tasksOn(ds).filter(t=>!isDone(t,ds)).sort((a,b)=>(a.dur||9999)-(b.dur||9999));if(!l.length){alert('Tout est fait aujourd\'hui, repose-toi 🌸');return}startFocus(l[0].id,ds)}
 function vFocus(){const t=S.tasks.find(x=>x.id==F.id);
@@ -715,13 +718,13 @@ function go(t){if(t===tab){scrollTo(0,0);return}const keys=Object.keys(TABS).con
 let TLS=null;
 const FA=(k,sum)=>` data-fold="${k}" data-sum="${esc(sum)}"`;
 const firstTitles=(l,n=2)=>l.slice(0,n).map(t=>t.title).join(' · ')+(l.length>n?` · +${l.length-n}`:'');
-function foldify(){try{if(!S.fold)S.fold={};document.querySelectorAll('#app .card[data-fold]').forEach(c=>{const k=c.dataset.fold,head=c.firstElementChild;if(!head||c.querySelector(':scope>.fbody'))return;
+function foldify(){try{document.querySelectorAll('#app .card[data-fold]').forEach(c=>{const k=c.dataset.fold,head=c.firstElementChild;if(!head||c.querySelector(':scope>.fbody'))return;
   const body=document.createElement('div');body.className='fbody';while(head.nextSibling)body.appendChild(head.nextSibling);
   const sm=document.createElement('div');sm.className='fsum'+(/[a-zà-ÿ]/i.test(c.dataset.sum)?'':' big');sm.textContent=c.dataset.sum;c.appendChild(sm);c.appendChild(body);
   head.classList.add('fhead');const h2=head.matches('h2')?head:head.querySelector('h2');if(h2){const ch=document.createElement('span');ch.className='chev';ch.textContent='›';h2.appendChild(ch)}
-  if(S.fold[k])c.classList.add('fopen');
-  head.addEventListener('click',e=>{if(e.target.closest('button,input,select,a,label,textarea'))return;S.fold[k]=!S.fold[k];save();c.classList.toggle('fopen',!!S.fold[k]);
-    if(S.fold[k]){c.querySelectorAll('.pi textarea').forEach(growPi);c.querySelectorAll('.tlw').forEach(w=>{w.scrollTop=(TLS&&TLS.ds===w.dataset.ds)?TLS.top:+w.dataset.start})}})})}catch(e){}}
+  if(FOLD[k])c.classList.add('fopen');
+  head.addEventListener('click',e=>{if(e.target.closest('button,input,select,a,label,textarea'))return;FOLD[k]=!FOLD[k];saveFold();c.classList.toggle('fopen',!!FOLD[k]);
+    if(FOLD[k]){c.querySelectorAll('.pi textarea').forEach(growPi);c.querySelectorAll('.tlw').forEach(w=>{w.scrollTop=(TLS&&TLS.ds===w.dataset.ds)?TLS.top:+w.dataset.start})}})})}catch(e){}}
 let UNDO=null,undoT=null,lastSnap=0;
 function snap(msg){const now=Date.now();if(now-lastSnap<400)return;lastSnap=now;UNDO=JSON.stringify(S);
   let el=document.getElementById('toast');if(!el){el=document.createElement('div');el.id='toast';document.body.appendChild(el)}
