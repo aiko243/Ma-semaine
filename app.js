@@ -141,7 +141,7 @@ function vAccueil(){const ds=curDay,isT=ds===TODAY(),d=P(ds),all=tasksOn(ds),rt=
   <div class="bar" style="margin-top:14px"><i style="width:${pc}%"></i></div><div class="row mut" style="margin-top:6px"><span>${done}/${all.length} fait ${isT?'aujourd\'hui':'ce jour-là'}</span><span class="sp"></span><span>⭐ ${S.stars} étoiles</span></div></div>
   ${F.id&&S.tasks.some(x=>x.id==F.id)?`<div class="boost" style="margin:14px 0;display:flex;align-items:center;gap:10px"><span class="sp">🎯 ${esc(S.tasks.find(x=>x.id==F.id).title)}</span><button class="btn p" onclick="go('Focus')">Reprendre</button></div>`:''}
   ${isT?backupCard()+catAlerts():''}
-  ${isT&&S.sport[ds]==='p'?`<div class="boost" style="margin:14px 0;display:flex;align-items:center;gap:10px"><span class="sp">🏋️ Sport prévu aujourd'hui</span><button class="btn p" onclick="sportToday('d')">C'est fait 💪</button></div>`:''}
+  ${isT&&S.sport[ds]==='p'?`<div class="boost" style="margin:14px 0;display:flex;align-items:center;gap:10px"><span class="sp">🏋️ Sport prévu aujourd'hui</span><button class="btn p" onclick="sportToday()">C'est fait 💪</button></div>`:''}
   <div class="card"${FA('acc-rout',rt.length?`${rdone}/${rt.length} faites`+(rt.filter(t=>!isDone(t,ds)).length?' · reste : '+firstTitles(rt.filter(t=>!isDone(t,ds))):' · tout est fait 🎉'):'Pas de routine ce jour-là')}><div class="row"><h2 style="margin:0">☀️ Ma routine</h2><span class="sp"></span><span class="lbl">${rdone}/${rt.length}</span></div>
   <div style="margin-top:8px">${rt.map(t=>routineLine(t,ds)).join('')||'<p class="mut">Pas de routine ce jour-là.</p>'}</div>
   <div class="row" style="margin-top:10px"><button class="btn" onclick="newRoutine()">+ Routine</button><button class="btn s" onclick="goOpen('To-do','rout')">Gérer mes routines</button></div></div>
@@ -292,19 +292,33 @@ let sportMonth=TODAY().slice(0,7);
 function sportDone(w){let c=0;for(let j=0;j<7;j++){const ds=add(w,j);if(S.sport[ds]==='d')c++;S.tasks.forEach(t=>{if(t.cat==='Sport'&&isDone(t,ds))c++})}return c+(S.sess[w]||0)}
 function sportPlanned(w){let c=0;for(let j=0;j<7;j++){const ds=add(w,j);if(S.sport[ds]==='p'&&ds>=TODAY())c++}return c}
 /* toucher un jour : passé → fait / vide ; aujourd'hui → prévu / fait / vide ; futur → prévu / vide */
-function sportTap(ds){const td=TODAY(),cur=S.sport[ds]||'';
-  const cyc=ds<td?['','d']:ds>td?['','p']:['','p','d'],nx=cyc[(cyc.indexOf(cur)+1)%cyc.length]||(cur==='p'&&ds<td?'d':'');
-  if(nx==='d'&&cur!=='d')S.stars++;if(cur==='d'&&nx!=='d')S.stars=Math.max(0,S.stars-1);
-  if(nx)S.sport[ds]=nx;else delete S.sport[ds];save();render()}
-function sportToday(v){const td=TODAY(),cur=S.sport[td];if(v==='d'&&cur!=='d')S.stars++;S.sport[td]=v;save();render()}
+if(!S.sportInfo)S.sportInfo={};
+const SPORT_T=[['full','🏋️','Full body'],['haut','💪','Haut du corps'],['bas','🦵','Bas du corps'],['fess','🍑','Fessiers'],['abdo','🔥','Abdos'],['cardio','🏃‍♀️','Cardio'],['yoga','🧘‍♀️','Yoga / Pilates'],['marche','🚶‍♀️','Marche'],['nage','🏊‍♀️','Natation']];
+const sportEmo=ds=>{const t=((S.sportInfo[ds]||{}).t||[])[0],d=SPORT_T.find(x=>x[0]===t);return d?d[1]:'💪'};
+const sportLabel=ds=>{const i=S.sportInfo[ds]||{},l=(i.t||[]).map(k=>{const d=SPORT_T.find(x=>x[0]===k);return d?d[1]+' '+d[2]:''}).filter(Boolean);if(i.n)l.push(i.n);return l.join(' · ')};
+/* état d'un jour : 'p' prévu, 'd' fait ; type(s) et note facultatifs */
+function sportSet(ds,st,types,note){const cur=S.sport[ds];
+  if(st==='d'&&cur!=='d')S.stars++;if(cur==='d'&&st!=='d')S.stars=Math.max(0,S.stars-1);
+  if(st)S.sport[ds]=st;else delete S.sport[ds];
+  const info={};if(st&&types&&types.length)info.t=types;if(st&&note)info.n=note;
+  if(Object.keys(info).length)S.sportInfo[ds]=info;else delete S.sportInfo[ds];save();render()}
+function sportTap(ds,force){const td=TODAY(),cur=force||S.sport[ds]||(ds<=td?'d':'p'),info=S.sportInfo[ds]||{},sel=info.t||[];
+  openSheet(`<h3 style="text-transform:capitalize">${fr(ds)}</h3>
+  <div class="chips"><label class="chip"><input type="radio" name="sp_st" value="p" ${cur==='p'?'checked':''}><span>🗓️ Prévu</span></label><label class="chip"><input type="radio" name="sp_st" value="d" ${cur==='d'?'checked':''}><span>💪 Fait</span></label></div>
+  <span class="fl">Type de séance (facultatif)</span>
+  <div class="chips">${SPORT_T.map(([k,e,n])=>`<label class="chip"><input type="checkbox" name="sp_t" value="${k}" ${sel.includes(k)?'checked':''}><span>${e} ${n}</span></label>`).join('')}</div>
+  <span class="fl">Note (facultatif)</span><input id="sp_n" value="${esc(info.n||'')}" placeholder="ex : jambes + gainage, 5 km…">
+  <div class="fbtns">${S.sport[ds]?`<button class="btn d" onclick="closeSheet();sportSet('${ds}','')">Effacer</button>`:''}<button class="btn" onclick="closeSheet()">Annuler</button><button class="btn p" onclick="sportSave('${ds}')">Enregistrer</button></div>`)}
+function sportSave(ds){const st=$r('sp_st')||'d',t=[...document.querySelectorAll('input[name="sp_t"]:checked')].map(x=>x.value),n=$v('sp_n').trim();closeSheet();sportSet(ds,st,t,n)}
+function sportToday(){sportTap(TODAY(),'d')}
 function shiftSport(n){const[y,m]=sportMonth.split('-').map(Number);sportMonth=iso(new Date(y,m-1+n,1)).slice(0,7);render()}
 function sportCal(){const[y,m]=sportMonth.split('-').map(Number),start=monday(iso(new Date(y,m-1,1))),td=TODAY(),cells=[];
   for(let i=0;i<42;i++){const ds=add(start,i),st=S.sport[ds],out=ds.slice(0,7)!==sportMonth,miss=st==='p'&&ds<td;
     if(i===35&&out)break;
-    cells.push(`<button class="spd ${out?'out':''} ${ds===td?'today':''} ${st==='d'?'done':st==='p'?(miss?'miss':'plan'):''}" onclick="sportTap('${ds}')" aria-label="${fr(ds)}${st==='d'?', fait':st==='p'?', prévu':''}"><b>${P(ds).getDate()}</b><span>${st==='d'?'💪':st==='p'?(miss?'·':'🗓️'):''}</span></button>`)}
+    cells.push(`<button class="spd ${out?'out':''} ${ds===td?'today':''} ${st==='d'?'done':st==='p'?(miss?'miss':'plan'):''}" onclick="sportTap('${ds}')" aria-label="${fr(ds)}${st==='d'?', fait':st==='p'?', prévu':''}"><b>${P(ds).getDate()}</b><span>${st==='d'?sportEmo(ds):st==='p'?(miss?'·':'🗓️'):''}</span></button>`)}
   return `<div class="row"><button class="btn" onclick="shiftSport(-1)" aria-label="Mois précédent">‹</button><span class="sp" style="text-align:center;font-weight:700;text-transform:capitalize">${MOIS[m-1]} ${y}</span><button class="btn" onclick="shiftSport(1)" aria-label="Mois suivant">›</button></div>
   <div class="grid7" style="margin-top:10px">${['L','M','M','J','V','S','D'].map(x=>`<div class="mut" style="text-align:center">${x}</div>`).join('')}${cells.join('')}</div>
-  <div class="row mut" style="justify-content:center;gap:14px;margin-top:10px;font-size:12px"><span>🗓️ prévu</span><span>💪 fait</span><span>Touche un jour pour changer</span></div>`}
+  <div class="row mut" style="justify-content:center;gap:14px;margin-top:10px;font-size:12px"><span>🗓️ prévu</span><span>💪 fait</span><span>Touche un jour pour noter</span></div>`}
 function vSport(){const wk=monday(TODAY()),n=sportDone(wk),pl=sportPlanned(wk),ws=[...S.weights].sort((a,b)=>a.d<b.d?-1:1);
   let svg='';if(ws.length>1){const v=ws.map(w=>w.kg),mn=Math.min(...v)-1,mx=Math.max(...v)+1;const pts=ws.map((w,i)=>`${i/(ws.length-1)*300},${110-(w.kg-mn)/(mx-mn)*100}`).join(' ');
     svg=`<svg viewBox="-5 0 310 120" style="width:100%;margin-top:10px"><defs><linearGradient id="g"><stop offset="0" stop-color="#f2a7c3"/><stop offset="1" stop-color="#c9b3f5"/></linearGradient></defs><polyline points="${pts}" fill="none" stroke="url(#g)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>${ws.map((w,i)=>`<circle cx="${i/(ws.length-1)*300}" cy="${110-(w.kg-mn)/(mx-mn)*100}" r="4" fill="#c9b3f5"/>`).join('')}</svg>`}
@@ -315,6 +329,7 @@ function vSport(){const wk=monday(TODAY()),n=sportDone(wk),pl=sportPlanned(wk),w
   <div class="bar" style="margin-top:10px"><i style="width:${Math.min(100,n/S.goal*100)}%"></i></div>
   <div style="margin-top:14px">${sportCal()}</div>
   <button class="btn s" style="margin-top:12px" onclick="goalForm()">Changer l'objectif</button></div>
+  ${(()=>{const l=Object.keys(S.sport).filter(d=>S.sport[d]==='d'||d>=TODAY()).sort().reverse().slice(0,10);return `<div class="card"${FA('sp-list',l.length?l.slice(0,2).map(d=>P(d).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric'})+' '+(sportLabel(d)||'séance')).join(' · '):'Aucune séance notée')}><h2>📝 Historique</h2>${l.map(d=>`<button class="op" onclick="sportTap('${d}')"><span class="opi">${S.sport[d]==='d'?sportEmo(d):'🗓️'}</span><span class="sp"><b style="text-transform:capitalize">${P(d).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'short'})}</b><small>${S.sport[d]==='d'?'Fait':'Prévu'}${sportLabel(d)?' · '+esc(sportLabel(d)):''}</small></span></button>`).join('')||'<p class="mut">Touche un jour du calendrier pour noter une séance.</p>'}</div>`})()}
   <div class="card"${FA('sp-hist',(t=>t+' séance'+(t>1?'s':'')+' ces 8 dernières semaines')(sw.reduce((a,x)=>a+x[1],0)))}><h2>📈 8 dernières semaines</h2>${chart(sw,w=>P(w).getDate()+'/'+(P(w).getMonth()+1))}</div>
   <div class="card"${FA('sp-poids',ws.length?`Dernier : ${String(ws[ws.length-1].kg).replace('.',',')} kg`+(diff!==null?` · ${diff>0?'+':''}${String(diff).replace('.',',')} kg depuis le début`:''):'Aucune pesée')}><div class="row"><h2 style="margin:0">⚖️ Mon poids</h2><span class="sp"></span><button class="btn p" onclick="addWeight()">+ Ajouter</button></div>
   ${ws.length?`<div class="mut">Dernier : <b>${ws[ws.length-1].kg} kg</b>${diff!==null?` · ${diff>0?'+':''}${diff} kg depuis le début`:''}</div>`:'<p class="mut">Ajoute ta première pesée.</p>'}${svg}
