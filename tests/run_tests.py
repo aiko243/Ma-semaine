@@ -261,7 +261,7 @@ async def test_rappels(b):
     print('Rappels')
     d = await Device.new(b, 'A')
     await d.page.context.grant_permissions(['notifications'], origin='http://127.0.0.1:8765')
-    await d.js("window._n=0;window.notify=()=>_n++;const x=new Date();x.setMinutes(x.getMinutes()+8);"
+    await d.js("window.Notification=window.Notification||{};try{Object.defineProperty(Notification,'permission',{get:()=>'granted'})}catch(e){};window._n=0;window.notify=()=>_n++;const x=new Date();x.setMinutes(x.getMinutes()+8);"
                "S.tasks.push({id:3,title:'RDV',cat:'Perso',time:String(x.getHours()).padStart(2,'0')+':'+String(x.getMinutes()).padStart(2,'0'),date:TODAY(),recur:null,subs:[]});"
                "save();localStorage.removeItem('maSemaine_dirty')")
     await d.js("checkReminders();checkReminders();checkReminders()")
