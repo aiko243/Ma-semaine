@@ -400,17 +400,18 @@ function vAccueil(){const ds=curDay,isT=ds===TODAY(),d=P(ds),all=tasksOn(ds),rt=
   <div><div class="wd">${d.toLocaleDateString('fr-FR',{weekday:'long'})}</div><div class="mo">${d.getDate()} ${MOIS[d.getMonth()]} ${d.getFullYear()} · semaine ${isoWeek(ds).w}</div></div></div>
   <div class="boost" style="margin-top:16px">${MSG[d.getDate()%MSG.length]}</div>
   <div class="bar" style="margin-top:14px"><i style="width:${pc}%"></i></div><div class="row mut" style="margin-top:6px"><span>${done}/${all.length} fait ${isT?'aujourd\'hui':'ce jour-là'}</span><span class="sp"></span><span>⭐ ${S.stars} étoiles</span></div></div>
+  ${F.id&&S.tasks.some(x=>x.id==F.id)?`<div class="boost" style="margin:14px 0;display:flex;align-items:center;gap:10px"><span class="sp">🎯 ${esc(S.tasks.find(x=>x.id==F.id).title)}</span><button class="btn p" onclick="go('Focus')">Reprendre</button></div>`:''}
   ${isT?backupCard()+catAlerts():''}
   <div class="card"${FA('acc-rout',rt.length?`${rdone}/${rt.length} faites`+(rt.filter(t=>!isDone(t,ds)).length?' · reste : '+firstTitles(rt.filter(t=>!isDone(t,ds))):' · tout est fait 🎉'):'Pas de routine ce jour-là')}><div class="row"><h2 style="margin:0">☀️ Ma routine</h2><span class="sp"></span><span class="lbl">${rdone}/${rt.length}</span></div>
   <div style="margin-top:8px">${rt.map(t=>routineLine(t,ds)).join('')||'<p class="mut">Pas de routine ce jour-là.</p>'}</div>
   <div class="row" style="margin-top:10px"><button class="btn" onclick="newRoutine()">+ Routine</button><button class="btn s" onclick="goOpen('To-do','rout')">Gérer mes routines</button></div></div>
-  ${stickerCard(ds,'✨ Ma journée en stickers','acc-stk')}
   <div class="card"${FA('acc-todo',tk.length?`${tk.filter(t=>isDone(t,ds)).length}/${tk.length} faites`+(tk.filter(t=>!isDone(t,ds)).length?' · '+firstTitles(tk.filter(t=>!isDone(t,ds))):''):'Rien d’autre de prévu')}><div class="row"><h2 style="margin:0">📋 To-do du jour</h2><span class="sp"></span><button class="btn" onclick="newTask({date:curDay})">+ Ajouter</button></div>
   ${tk.map(t=>taskRow(t,ds)).join('')||'<p class="mut">Rien d\'autre de prévu, profite 🌸</p>'}
   <button class="btn" style="margin-top:10px" onclick="copyDay()">📋 Copier cette to-do vers un autre jour</button>
   <div class="row" style="margin-top:8px"><button class="btn s" onclick="tplApplySheet()">🗂️ Appliquer un modèle</button><button class="btn s" onclick="tplSaveSheet()">💾 Enregistrer comme modèle</button></div></div>
-  ${timeline(ds)}
   ${isT?'<button class="btn p flemme" style="margin:0 0 6px" onclick="flemme()">🙈 J\'ai la flemme, choisis pour moi</button>':''}
+  ${stickerCard(ds,'✨ Ma journée en stickers','acc-stk')}
+  ${timeline(ds)}
   <div class="card"${FA('acc-pi',(()=>{const f=S.postits.filter(n=>n.t.trim());return f.length?f.length+' post-it · '+f[0].t.trim().split('\n')[0].slice(0,40):'Aucune note'})())}><div class="row"><h2 style="margin:0">💖 Pense-bête</h2><span class="sp"></span><button class="btn" onclick="addPostit()">+ Post-it</button></div>
   <div class="postits">${S.postits.map(n=>`<div class="pi c${n.c}"><button class="x" onclick="delPostit(${n.id})">✕</button><textarea placeholder="Note ici..." oninput="S.postits.find(x=>x.id==${n.id}).t=this.value;save();growPi(this)">${esc(n.t)}</textarea></div>`).join('')}</div></div>`}
 function addPostit(){S.postits.push({id:uid(),t:'',c:S.postits.length%5});save();render()}
@@ -469,7 +470,7 @@ function searchRun(q){q=norm(q).trim();const el=document.getElementById('sres');
   el.innerHTML=r.length?r.slice(0,40).map(x=>`<button class="sr" onclick="${x[3]}"><span style="font-size:20px">${x[0]}</span><span class="sp"><b>${esc(x[1])}</b><small>${esc(x[2])}</small></span></button>`).join(''):'<p class="mut">Rien trouvé 🌸</p>'}
 function goOpen(t,k){if(!S.fold)S.fold={};if(k){S.fold[k]=1;save()}closeSheet();if(tab===t)render();else go(t)}
 function openRes(k,id){if(k==='t'){const t=S.tasks.find(x=>x.id==id);if(t.recur)goOpen('To-do','rout');else if(t.date){curDay=t.date;goOpen('Accueil','acc-todo')}else goOpen('To-do',t.cat==='Maison'?'todo-men':'todo-gen')}
-  else if(k==='w')goOpen('Achats','ach-wish');else if(k==='p')goOpen('Accueil','acc-pi');else if(k==='b'){const x=S.bud.tx.find(y=>y.id==id);budMonth=x.d.slice(0,7);goOpen('Budget','bud-ops')}}
+  else if(k==='w')goOpen('Budget','ach-wish');else if(k==='p')goOpen('Accueil','acc-pi');else if(k==='b'){const x=S.bud.tx.find(y=>y.id==id);budMonth=x.d.slice(0,7);goOpen('Budget','bud-ops')}}
 function copyDay(){dateSheet('Copier vers quel jour ?',add(curDay,1),to=>{S.tasks.filter(t=>!t.recur&&t.date===curDay).forEach(t=>S.tasks.push({...t,id:uid(),date:to,subs:(t.subs||[]).map(x=>({...x}))}));save();curDay=to;render()})}
 
 const MENAGE=[['Aspirateur',30,7],['Serpillière',25,14],['Poussière',15,14],['Salle de bain',20,7],['Toilettes',10,7],['Cuisine & plan de travail',20,7],['Changer les draps',15,14],['Vitres',30,30],['Nettoyer le frigo',20,30],['Sortir les poubelles',5,3],['Ranger le salon',20,7],['Ranger la chambre',20,7]];
@@ -527,11 +528,11 @@ function focusDone(){const t=S.tasks.find(x=>x.id==F.id);if(!t)return;const real
   clearInterval(F.iv);F={id:null};save();alert('Bravo ! 🎉 +2 étoiles');go('Accueil')}
 function flemme(){const ds=TODAY(),l=tasksOn(ds).filter(t=>!isDone(t,ds)).sort((a,b)=>(a.dur||9999)-(b.dur||9999));if(!l.length){alert('Tout est fait aujourd\'hui, repose-toi 🌸');return}startFocus(l[0].id,ds)}
 function vFocus(){const t=S.tasks.find(x=>x.id==F.id);
-  if(!t){const l=tasksOn(TODAY()).filter(x=>!isDone(x,TODAY()));return `<div class="card"><h2>🎯 Focus</h2><div class="mut">Choisis une seule tâche. Juste celle-là.</div>${l.map(x=>`<div class="task"><span class="sp tt">${esc(x.title)}</span><button class="btn p" onclick="startFocus(${x.id},TODAY())">Lancer</button></div>`).join('')||'<p class="mut">Rien à faire aujourd\'hui 🌷</p>'}<button class="btn flemme" onclick="flemme()">🙈 J'ai la flemme, choisis pour moi</button></div>`}
+  if(!t){const l=tasksOn(TODAY()).filter(x=>!isDone(x,TODAY()));return `<div class="card"><h2>🎯 Focus</h2><div class="mut">Choisis une seule tâche. Juste celle-là.</div>${l.map(x=>`<div class="task"><span class="sp tt">${esc(x.title)}</span><button class="btn p" onclick="startFocus(${x.id},TODAY())">Lancer</button></div>`).join('')||'<p class="mut">Rien à faire aujourd\'hui 🌷</p>'}<button class="btn flemme" onclick="flemme()">🙈 J'ai la flemme, choisis pour moi</button><button class="btn s" style="margin-top:10px" onclick="go('Accueil')">‹ Retour</button></div>`}
   return `<div class="card" style="text-align:center"><div class="kick">EN CE MOMENT</div><h2>${esc(t.title)}</h2><div class="timer" id="tm">${fmt(F.left)}</div>${F.up?'<div class="mut">⏱️ Chrono libre, prends ton temps</div>':''}
   ${t.subs&&t.subs.length?`<div style="text-align:left;max-width:360px;margin:0 auto 12px">${subsHtml(t,F.ds)}</div>`:''}<div class="boost">Juste cette tâche. Rien d'autre n'existe 💗</div><div class="row" style="justify-content:center;margin-top:14px">
   <button class="btn" onclick="F.run=!F.run;render()">${F.run?'⏸ Pause':'▶️ Reprendre'}</button>${F.up?'':`<button class="btn" onclick="F.left+=300;render()">+5 min</button>`}
-  <button class="btn p" onclick="focusDone()">✅ Terminé</button><button class="btn d" onclick="clearInterval(F.iv);F={id:null};render()">Arrêter</button></div>
+  <button class="btn p" onclick="focusDone()">✅ Terminé</button><button class="btn d" onclick="clearInterval(F.iv);F={id:null};go('Accueil')">Arrêter</button></div>
   <p class="mut">Garde la page ouverte. Pour une alerte fiable, lance aussi le minuteur de l'iPad.</p></div>`}
 
 function weekCounts(n){const out=[];let m=monday(TODAY());for(let i=n-1;i>=0;i--){const w=add(m,-7*i);let c=0;for(let j=0;j<7;j++){const ds=add(w,j);S.tasks.forEach(t=>{if(isDone(t,ds))c++})}out.push([w,c])}return out}
@@ -699,10 +700,11 @@ function backupCard(){if(window.SYNC_ON)return'';const now=Date.now(),last=S.las
   <div class="row"><button class="btn p" onclick="exportData()">Sauvegarder maintenant</button><button class="btn s" onclick="S.backupSnooze=Date.now()+2*864e5;save();render()">Plus tard</button></div></div>`}
 function importData(f){if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.tasks)throw 0;if(confirm('Remplacer les données de cet appareil par celles du fichier ?')){S=d;save();render();alert('Importé ! 🎉')}}catch(e){alert('Fichier non reconnu 😕')}};r.readAsText(f)}
 
-const TITLES={Accueil:'Mon récap',Mois:'Mon mois',Semaine:'Ma semaine','To-do':'À faire',Focus:'Mon focus','Trophées':'Mes trophées',Sport:'Mon sport',Achats:'Mes achats',Budget:'Mon budget','Réglages':'Mes réglages'};
-const TABS={Accueil:['🏡',vAccueil],Mois:['🗓️',vMois],Semaine:['📆',vSemaine],'To-do':['📝',vTodo],Focus:['🎯',vFocus],'Trophées':['🏆',vProgres],Sport:['💪',vSport],Achats:['🛍️',vAchats],Budget:['💶',vBudget],'Réglages':['💾',vReglages]};
+const TITLES={Accueil:'Mon récap',Mois:'Mon mois',Semaine:'Ma semaine','To-do':'À faire',Focus:'Mon focus','Trophées':'Mes trophées',Sport:'Mon sport',Budget:'Budget & achats','Réglages':'Mes réglages'};
+const HIDDEN={Focus:['🎯',vFocus]};
+const TABS={Accueil:['🏡',vAccueil],Mois:['🗓️',vMois],Semaine:['📆',vSemaine],'To-do':['📝',vTodo],'Trophées':['🏆',vProgres],Sport:['💪',vSport],Budget:['💶',()=>vBudget()+vAchats()],'Réglages':['💾',vReglages]};
 let turning=false;
-function go(t){if(t===tab){scrollTo(0,0);return}const keys=Object.keys(TABS),fwd=keys.indexOf(t)>keys.indexOf(tab),pg=document.getElementById('page');
+function go(t){if(t===tab){scrollTo(0,0);return}const keys=Object.keys(TABS).concat(Object.keys(HIDDEN)),fwd=keys.indexOf(t)>keys.indexOf(tab),pg=document.getElementById('page');
   const anim=pg&&pg.cloneNode&&!turning&&!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
   let ov=null;
   if(anim&&fwd){scrollTo(0,0);ov=pg.cloneNode(true);ov.removeAttribute('id');ov.className='turn';ov.style.height=Math.min(pg.offsetHeight,innerHeight+200)+'px';
@@ -726,7 +728,7 @@ function snap(msg){const now=Date.now();if(now-lastSnap<400)return;lastSnap=now;
   el.innerHTML=`<span>${msg}</span><button onclick="undo()">Annuler</button>`;el.classList.add('show');clearTimeout(undoT);undoT=setTimeout(()=>{el.classList.remove('show');UNDO=null},6000)}
 function undo(){if(!UNDO)return;S=JSON.parse(UNDO);UNDO=null;save();const el=document.getElementById('toast');if(el)el.classList.remove('show');render()}
 function growPi(e){e.style.height='auto';e.style.height=Math.max(104,Math.ceil(e.scrollHeight/26)*26)+'px'}
-function render(){if(!TABS[tab])tab=tab==='Routines'?'To-do':'Accueil';try{applySober()}catch(e){}try{const h=document.getElementById('ttl');if(h)h.textContent=(tab==='Accueil'&&curDay!==TODAY()?'Ma journée':TITLES[tab]||'Daily Journal')}catch(e){}document.getElementById('tabs').innerHTML=Object.entries(TABS).map(([k,v],i)=>`<button class="tab t${i} ${k===tab?'on':''}" onclick="${k==='Accueil'?"if(curDay!==TODAY()){curDay=TODAY();if(tab==='Accueil')render()}":''}go('${k}')"><span class="ic">${v[0]}</span>${k}</button>`).join('');document.getElementById('app').innerHTML=TABS[tab][1]();try{document.querySelectorAll('.pi textarea').forEach(growPi)}catch(e){}foldify();try{document.querySelectorAll('.tlw').forEach(w=>{if(!w.offsetParent)return;w.scrollTop=(TLS&&TLS.ds===w.dataset.ds)?TLS.top:+w.dataset.start;TLS={ds:w.dataset.ds,top:w.scrollTop}})}catch(e){}}
+function render(){if(!TABS[tab]&&!HIDDEN[tab])tab=tab==='Routines'?'To-do':tab==='Achats'?'Budget':'Accueil';try{applySober()}catch(e){}try{const h=document.getElementById('ttl');if(h)h.textContent=(tab==='Accueil'&&curDay!==TODAY()?'Ma journée':TITLES[tab]||'Daily Journal')}catch(e){}document.getElementById('tabs').innerHTML=Object.entries(TABS).map(([k,v],i)=>`<button class="tab t${i} ${k===tab?'on':''}" onclick="${k==='Accueil'?"if(curDay!==TODAY()){curDay=TODAY();if(tab==='Accueil')render()}":''}go('${k}')"><span class="ic">${v[0]}</span>${k}</button>`).join('');document.getElementById('app').innerHTML=(TABS[tab]||HIDDEN[tab])[1]();try{document.querySelectorAll('.pi textarea').forEach(growPi)}catch(e){}foldify();try{document.querySelectorAll('.tlw').forEach(w=>{if(!w.offsetParent)return;w.scrollTop=(TLS&&TLS.ds===w.dataset.ds)?TLS.top:+w.dataset.start;TLS={ds:w.dataset.ds,top:w.scrollTop}})}catch(e){}}
 /* ☁️ Synchronisation Firebase : mêmes données sur le téléphone et l'iPad */
 // Configuration du projet Firebase (Console Firebase → Paramètres du projet → Vos applications → Config).
 const FB_CONFIG={apiKey:"AIzaSyAETyemut2x7qEMgSTIYZ_jqcxYLcqFE9U",authDomain:"daily-journal-2c3b0.firebaseapp.com",projectId:"daily-journal-2c3b0",
