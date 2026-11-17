@@ -6,8 +6,8 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="icon.png">
 <meta name="theme-color" content="#fdf1f5">
-<meta name="apple-mobile-web-app-title" content="Ma Semaine">
-<title>Ma Semaine 🌷</title>
+<meta name="apple-mobile-web-app-title" content="Daily Journal">
+<title>Daily Journal 🌷</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" rel="stylesheet">
 <style>
 :root{--pink:#f2a7c3;--lav:#c9b3f5;--ink:#3a2f3d;--mut:#8a7f8c;--card:#fff;--soft:#f7f0f8;--grad:linear-gradient(90deg,#f2a7c3,#c9b3f5)}
@@ -225,7 +225,7 @@ footer{text-align:center;color:var(--mut);font-size:12px;margin-top:20px}
 <header><div class="row"><div class="kick">✨ MON DAILY PLANNER</div><span class="sp"></span><button class="btn s" onclick="searchSheet()" style="margin-right:6px">🔍</button><button class="btn s modebtn" id="modeBtn" onclick="toggleSober()">🌙 Mode sobre</button></div><h1 id="ttl">Mon récap 🌷</h1>
 </header>
 <main id="app"></main>
-<footer>Ma Semaine · tes données restent dans ce navigateur. Pense à sauvegarder 💾</footer>
+<footer>Daily Journal · tes données restent dans ce navigateur. Pense à sauvegarder 💾</footer>
 </div></div>
 <nav class="tabs" id="tabs"></nav>
 <script>
@@ -651,13 +651,13 @@ function vChat(){return catAlerts()+`<div class="card"${FA('ach-chat',(()=>{cons
 function vReglages(){const ns=notifState();return `<div class="card"><h2>🔔 Alertes</h2>
   <div class="mut">Un rappel 10 minutes avant et à l'heure de tes tâches avec une heure, et à la fin du minuteur Focus.</div>
   <div class="alert" style="margin-top:10px">Ça marche quand l'appli est ouverte ou vient d'être quittée. Si l'iPad la met en veille, les alertes ne partent plus : pour un rappel important, utilise aussi Rappels d'Apple.</div>
-  ${ns==='granted'?'<p><b>✅ Alertes activées</b></p>':ns==='denied'?'<p class="mut">Alertes refusées. Pour les réactiver : Réglages de l\'iPad → Notifications → Ma Semaine.</p>':`<button class="btn p" style="width:100%" onclick="askNotif()">Autoriser les alertes</button>`}</div>
+  ${ns==='granted'?'<p><b>✅ Alertes activées</b></p>':ns==='denied'?'<p class="mut">Alertes refusées. Pour les réactiver : Réglages de l\'iPad → Notifications → Daily Journal.</p>':`<button class="btn p" style="width:100%" onclick="askNotif()">Autoriser les alertes</button>`}</div>
   ${syncCard()}<div class="card"><h2>💾 Sauvegarde</h2><div class="mut">Dernière sauvegarde : ${S.lastBackup?new Date(S.lastBackup).toLocaleDateString('fr-FR',{day:'numeric',month:'long'}):'jamais'}</div><div class="mut">Crée un fichier avec toutes tes données (range-le dans iCloud Drive), puis importe-le sur ton autre appareil.</div>
   <div class="row" style="margin-top:10px"><button class="btn p" onclick="exportData()">Sauvegarder</button><label class="btn">Importer<input type="file" accept=".json,application/json" class="hide" onchange="importData(this.files[0])"></label></div>
   <button class="btn d" style="margin-top:14px;width:100%" onclick="resetAll()">Réinitialiser les données</button></div>`}
-async function exportData(){const name='ma-semaine-'+TODAY()+'.json',txt=JSON.stringify(S);
+async function exportData(){const name='daily-journal-'+TODAY()+'.json',txt=JSON.stringify(S);
   const done=()=>{S.lastBackup=Date.now();S.backupSnooze=0;save();render()};
-  try{const f=new File([txt],name,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Sauvegarde Ma Semaine'});done();return}}catch(e){if(e&&e.name==='AbortError')return}
+  try{const f=new File([txt],name,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Sauvegarde Daily Journal'});done();return}}catch(e){if(e&&e.name==='AbortError')return}
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'application/json'}));a.download=name;a.click();done()}
 function backupCard(){if(window.SYNC_ON)return'';const now=Date.now(),last=S.lastBackup||0,days=Math.floor((now-(last||S.created))/864e5);
   if((S.backupSnooze||0)>now)return'';if(last?days<7:days<3)return'';if(!S.tasks.length)return'';
@@ -692,7 +692,7 @@ function snap(msg){const now=Date.now();if(now-lastSnap<400)return;lastSnap=now;
   el.innerHTML=`<span>${msg}</span><button onclick="undo()">Annuler</button>`;el.classList.add('show');clearTimeout(undoT);undoT=setTimeout(()=>{el.classList.remove('show');UNDO=null},6000)}
 function undo(){if(!UNDO)return;S=JSON.parse(UNDO);UNDO=null;save();const el=document.getElementById('toast');if(el)el.classList.remove('show');render()}
 function growPi(e){e.style.height='auto';e.style.height=Math.max(104,Math.ceil(e.scrollHeight/26)*26)+'px'}
-function render(){try{applySober()}catch(e){}try{const h=document.getElementById('ttl');if(h)h.textContent=(TITLES[tab]||'Ma Semaine')+' 🌷'}catch(e){}document.getElementById('tabs').innerHTML=Object.entries(TABS).map(([k,v],i)=>`<button class="tab t${i} ${k===tab?'on':''}" onclick="go('${k}')"><span class="ic">${v[0]}</span>${k}</button>`).join('');document.getElementById('app').innerHTML=TABS[tab][1]();try{document.querySelectorAll('.pi textarea').forEach(growPi)}catch(e){}foldify();try{document.querySelectorAll('.tlw').forEach(w=>{if(!w.offsetParent)return;w.scrollTop=(TLS&&TLS.ds===w.dataset.ds)?TLS.top:+w.dataset.start;TLS={ds:w.dataset.ds,top:w.scrollTop}})}catch(e){}}
+function render(){try{applySober()}catch(e){}try{const h=document.getElementById('ttl');if(h)h.textContent=(TITLES[tab]||'Daily Journal')+' 🌷'}catch(e){}document.getElementById('tabs').innerHTML=Object.entries(TABS).map(([k,v],i)=>`<button class="tab t${i} ${k===tab?'on':''}" onclick="go('${k}')"><span class="ic">${v[0]}</span>${k}</button>`).join('');document.getElementById('app').innerHTML=TABS[tab][1]();try{document.querySelectorAll('.pi textarea').forEach(growPi)}catch(e){}foldify();try{document.querySelectorAll('.tlw').forEach(w=>{if(!w.offsetParent)return;w.scrollTop=(TLS&&TLS.ds===w.dataset.ds)?TLS.top:+w.dataset.start;TLS={ds:w.dataset.ds,top:w.scrollTop}})}catch(e){}}
 /* ☁️ Synchronisation Firebase : mêmes données sur le téléphone et l'iPad */
 // Configuration du projet Firebase (Console Firebase → Paramètres du projet → Vos applications → Config).
 const FB_CONFIG=null;
@@ -765,7 +765,7 @@ function syncInner(){const t=SY.last?new Date(SY.last).toLocaleString('fr-FR',{d
 const syncCard=()=>`<div class="card" id="syncCard">${syncInner()}</div>`;
 function syncUI(){const el=document.getElementById('syncCard');
   if(el){const v=[syncVal('sy_em'),syncVal('sy_pw')];el.innerHTML=syncInner();const e2=document.getElementById('sy_em'),p2=document.getElementById('sy_pw');if(e2&&v[0])e2.value=v[0];if(p2&&v[1])p2.value=v[1]}
-  const f=document.querySelector('footer');if(f)f.textContent=SY.st==='on'?'Ma Semaine · tes données sont synchronisées ☁️':'Ma Semaine · tes données restent dans ce navigateur. Pense à sauvegarder 💾'}
+  const f=document.querySelector('footer');if(f)f.textContent=SY.st==='on'?'Daily Journal · tes données sont synchronisées ☁️':'Daily Journal · tes données restent dans ce navigateur. Pense à sauvegarder 💾'}
 function resetAll(){if(!confirm(SY.st==='on'?'Tout effacer, sur cet appareil ET sur tes autres appareils ? Pense à sauvegarder avant.':'Tout effacer ? Pense à sauvegarder avant.'))return;
   localStorage.removeItem(K);if(SY.st==='on')lss('maSemaine_forcePush','1');try{sessionStorage.setItem('maSemaine_tab',tab)}catch(e){}location.reload()}
 addEventListener('online',()=>{if(SY.st==='err')syncInit();else push()});

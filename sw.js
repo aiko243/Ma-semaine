@@ -1,4 +1,4 @@
-// Service worker de Ma Semaine : sert uniquement à afficher les alertes.
+// Service worker de Daily Journal : sert uniquement à afficher les alertes.
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 self.addEventListener('notificationclick', e => {

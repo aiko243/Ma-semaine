@@ -1,6 +1,6 @@
 {
-  "name": "Ma Semaine",
-  "short_name": "Ma Semaine",
+  "name": "Daily Journal",
+  "short_name": "Daily Journal",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
