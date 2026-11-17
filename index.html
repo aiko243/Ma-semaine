@@ -292,10 +292,10 @@ function delStk(id){snap('Sticker supprimé');S.stkDefs=S.stkDefs.filter(x=>x.id
 function stickerCard(ds,title,key='stk'){const on=S.stk[ds]||[],mine=stkOf(ds);
   return `<div class="card"${FA(key,mine.length?mine.map(d=>d.e).join('  '):'Aucun sticker pour l’instant')}><div class="row"><h2 style="margin:0">${title}</h2><span class="sp"></span><button class="btn s" onclick="stkEdit=!stkEdit;render()">${stkEdit?'Terminé':'Modifier'}</button></div>
   <div class="mut" style="margin:4px 0 10px">${stkEdit?'Touche la croix pour retirer un sticker de la liste, ou ajoute le tien.':'Touche ce que tu fais ce jour-là, ça apparaît dans ta semaine et ton mois.'}</div>
-  <div class="stks">${S.stkDefs.map(d=>stkEdit?`<button class="stk" onclick="delStk('${d.id}')"><span class="se">${d.e}</span><span class="sn">${esc(d.n)}</span><span class="sx">✕</span></button>`
-    :`<button class="stk ${on.includes(d.id)?'on':''}" onclick="toggleStk('${ds}','${d.id}')"><span class="se">${d.e}</span><span class="sn">${esc(d.n)}</span></button>`).join('')}
+  <div class="stks">${S.stkDefs.map(d=>stkEdit?`<button class="stk" onclick="delStk('${d.id}')"><span class="se">${esc(d.e)}</span><span class="sn">${esc(d.n)}</span><span class="sx">✕</span></button>`
+    :`<button class="stk ${on.includes(d.id)?'on':''}" onclick="toggleStk('${ds}','${d.id}')"><span class="se">${esc(d.e)}</span><span class="sn">${esc(d.n)}</span></button>`).join('')}
   ${stkEdit?'<button class="stk add" onclick="addStk()"><span class="se">＋</span><span class="sn">Nouveau</span></button>':''}</div></div>`}
-const stkLine=(ds,cls)=>{const l=stkOf(ds);return l.length?`<div class="${cls}">${l.map(d=>`<span title="${esc(d.n)}">${d.e}</span>`).join('')}</div>`:''};
+const stkLine=(ds,cls)=>{const l=stkOf(ds);return l.length?`<div class="${cls}">${l.map(d=>`<span title="${esc(d.n)}">${esc(d.e)}</span>`).join('')}</div>`:''};
 if(!S.sub)S.sub={};if(!S.tpl)S.tpl=[];if(!S.lastDone)S.lastDone={};if(!S.wishCfg)S.wishCfg={wait:7};if(!S.bud)S.bud={tx:[],fixed:[],limits:{}};if(!S.wish)S.wish=[];if(!S.created)S.created=Date.now();
 const save=()=>{if(window.MS_BOOT){S._mt=Date.now();try{localStorage.setItem('maSemaine_dirty','1')}catch(e){}}localStorage.setItem(K,JSON.stringify(S));try{syncPush()}catch(e){}try{if(UNDO&&Date.now()-lastSnap>400){UNDO=null;const el=document.getElementById('toast');if(el)el.classList.remove('show')}}catch(e){}};
 const CATS=['Perso','Maison','Administratif','Sport','Chat'];
@@ -312,7 +312,7 @@ const weeksIn=y=>isoWeek(iso(new Date(y,11,28))).w;
 const YEARS=()=>{const c=new Date().getFullYear(),a=[];for(let y=c-5;y<=c+3;y++)a.push(y);return a};
 const MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 const fr=s=>P(s).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
-const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let tab=(()=>{try{const t=sessionStorage.getItem('maSemaine_tab');sessionStorage.removeItem('maSemaine_tab');return t||'Accueil'}catch(e){return'Accueil'}})(),curDay=TODAY(),curWeek=monday(TODAY()),curMonth=TODAY().slice(0,7);
 
 function occurs(t,ds){
@@ -579,7 +579,7 @@ function wishForm(id){const w=id?S.wish.find(x=>x.id==id):{name:'',price:'',link
   <div class="fbtns">${id?`<button class="btn d" onclick="delWish(${id})">Supprimer</button>`:''}<button class="btn" onclick="closeSheet()">Annuler</button><button class="btn p" onclick="saveWish(${id||'null'})">Enregistrer</button></div>`)}
 function saveWish(id){const name=$v('f_wn').trim();if(!name){alert('Indique ce que tu veux acheter 🌸');return}
   const price=parseFloat(($v('f_wp')||'').replace(',','.'));const w=id?S.wish.find(x=>x.id==id):{id:uid(),added:TODAY(),bought:null};
-  w.name=name;w.price=isNaN(price)?null:price;w.link=$v('f_wl').trim();if(!id)S.wish.push(w);save();closeSheet();render()}
+  w.name=name;w.price=isNaN(price)?null:price;w.link=$v('f_wl').trim();if(w.link&&!/^https?:\/\//i.test(w.link))w.link='https://'+w.link.replace(/^[a-z]+:\/*/i,'');if(!id)S.wish.push(w);save();closeSheet();render()}
 function delWish(id){snap('Envie retirée');S.wish=S.wish.filter(x=>x.id!=id);save();closeSheet();render()}
 function buyWish(id){const w=S.wish.find(x=>x.id==id);
   if(!w.bought){const d=Math.round((P(TODAY())-P(w.added))/864e5),wait=S.wishCfg.wait||0,lim=S.bud.limits.Shopping,sp=catSpent(TODAY().slice(0,7),'Shopping'),msg=[];
@@ -603,7 +603,7 @@ function wishCard(){const todo=S.wish.filter(w=>!w.bought),done=S.wish.filter(w=
   ${todo.length?`<div class="row" style="margin-bottom:4px"><span class="lbl">Total : ${eur(tot)}</span></div>`:''}
   ${S.bud.limits.Shopping?(()=>{const sp=catSpent(TODAY().slice(0,7),'Shopping'),l=S.bud.limits.Shopping;return `<div style="margin:8px 0"><div class="row mut"><span class="sp">🛍️ Shopping ce mois-ci</span><b style="color:var(--ink)">${eur(sp)}</b>&nbsp;/ ${eur(l)}</div><div class="bar" style="margin-top:4px;height:8px"><i style="width:${Math.min(100,sp/l*100)}%;${sp>l?'background:#e0708f':''}"></i></div></div>`})():''}
   ${todo.map(w=>{const d=days(w);return `<div class="task"><div class="sp"><div class="row"><span class="tt">${esc(w.name)}</span><span class="sp"></span>${w.price!=null?`<span class="pill">${eur(w.price)}</span>`:''}</div>
-   <div class="mut" style="margin-top:3px">${d<=0?'Ajouté aujourd\'hui':d===1?'Ajouté hier':'Ajouté il y a '+d+' jours'}${w.link?` · <a href="${esc(w.link)}" target="_blank" rel="noopener" style="color:#b0446f">voir le lien</a>`:''}</div>
+   <div class="mut" style="margin-top:3px">${d<=0?'Ajouté aujourd\'hui':d===1?'Ajouté hier':'Ajouté il y a '+d+' jours'}${w.link?` · <a href="${esc(/^https?:\/\//i.test(w.link)?w.link:'#')}" target="_blank" rel="noopener" style="color:#b0446f">voir le lien</a>`:''}</div>
    <div class="row" style="margin-top:6px">${(S.wishCfg.wait||0)>d?`<span class="pill">⏳ encore ${(S.wishCfg.wait||0)-d} j</span>`:(S.wishCfg.wait?'<span class="pill" style="background:#e3f6ec;color:#2f7a52">✅ prête</span>':'')}<button class="btn s" onclick="buyWish(${w.id})">✅ Acheté</button><button class="btn s" onclick="wishForm(${w.id})">Modifier</button></div></div></div>`}).join('')||'<p class="mut">Aucune envie notée pour l\'instant 🌸</p>'}
   ${done.length?`<details style="margin-top:10px"><summary class="mut">Déjà achetés (${done.length})</summary>${done.map(w=>`<div class="task done"><span class="sp tt">${esc(w.name)}</span>${w.price!=null?`<span class="pill">${eur(w.price)}</span>`:''}<button class="btn s" onclick="buyWish(${w.id})">Annuler</button></div>`).join('')}</details>`:''}</div>`}
 function goalForm(){openSheet(`<h3>Objectif de la semaine</h3><span class="fl">Séances par semaine</span>
@@ -698,7 +698,7 @@ function backupCard(){if(window.SYNC_ON)return'';const now=Date.now(),last=S.las
   if((S.backupSnooze||0)>now)return'';if(last?days<7:days<3)return'';if(!S.tasks.length)return'';
   return `<div class="backup"><b>💾 Petite sauvegarde ?</b><div class="mut" style="margin:4px 0 10px">${last?`Ta dernière sauvegarde date de ${days} jours.`:'Tu n\'as encore jamais sauvegardé.'} Tes données ne sont que dans cet appareil, un fichier dans iCloud Drive les met à l'abri.</div>
   <div class="row"><button class="btn p" onclick="exportData()">Sauvegarder maintenant</button><button class="btn s" onclick="S.backupSnooze=Date.now()+2*864e5;save();render()">Plus tard</button></div></div>`}
-function importData(f){if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.tasks)throw 0;if(confirm('Remplacer les données de cet appareil par celles du fichier ?')){S=d;save();render();alert('Importé ! 🎉')}}catch(e){alert('Fichier non reconnu 😕')}};r.readAsText(f)}
+function importData(f){if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.tasks)throw 0;if(confirm('Remplacer les données de cet appareil par celles du fichier ?'+(SY.st==='on'?' Elles seront aussi envoyées sur tes autres appareils.':'')+'\n\nUne copie de tes données actuelles est gardée dans Réglages → Version précédente.')){try{localStorage.setItem('maSemaine_prev',JSON.stringify({at:Date.now(),data:JSON.stringify(S)}))}catch(e){}S=d;save();render();alert('Importé ! 🎉')}}catch(e){alert('Fichier non reconnu 😕')}};r.readAsText(f)}
 
 const TITLES={Accueil:'Mon récap',Mois:'Mon mois',Semaine:'Ma semaine','To-do':'À faire',Focus:'Mon focus','Trophées':'Mes trophées',Sport:'Mon sport',Budget:'Budget & achats','Réglages':'Mes réglages'};
 const HIDDEN={Focus:['🎯',vFocus]};
@@ -790,6 +790,7 @@ async function push(force){if(!SY.user||!SY.fb)return;if(!force&&!isDirty())retu
 const syncVal=id=>{const el=document.getElementById(id);return el?el.value:''};
 async function syncLogin(create){const em=syncVal('sy_em').trim(),pw=syncVal('sy_pw');
   if(!em||!pw){SY.err='Indique ton e-mail et ton mot de passe 🌸';syncUI();return}
+  if(create&&pw.length<8){SY.err='Choisis un mot de passe d’au moins 8 caractères.';syncUI();return}
   SY.err='';SY.busy=true;syncUI();const{Au,auth}=SY.fb;
   try{await(create?Au.createUserWithEmailAndPassword:Au.signInWithEmailAndPassword)(auth,em,pw)}catch(e){SY.err=errMsg(e)}SY.busy=false;syncUI()}
 async function syncForgot(){const em=syncVal('sy_em').trim();if(!em){SY.err='Écris ton e-mail, puis touche « Mot de passe oublié ».';syncUI();return}
@@ -841,7 +842,7 @@ function syncUI(){statUI();const el=document.getElementById('syncCard');
   if(el){const v=[syncVal('sy_em'),syncVal('sy_pw')];el.innerHTML=syncInner();const e2=document.getElementById('sy_em'),p2=document.getElementById('sy_pw');if(e2&&v[0])e2.value=v[0];if(p2&&v[1])p2.value=v[1]}
   const f=document.querySelector('footer');if(f)f.textContent=SY.st==='on'?'Daily Journal · tes données sont synchronisées ☁️':'Daily Journal · tes données restent dans ce navigateur. Pense à sauvegarder 💾'}
 function resetAll(){if(!confirm(SY.st==='on'?'Tout effacer, sur cet appareil ET sur tes autres appareils ? Pense à sauvegarder avant.':'Tout effacer ? Pense à sauvegarder avant.'))return;
-  localStorage.removeItem(K);if(SY.st==='on')lss('maSemaine_forcePush','1');try{sessionStorage.setItem('maSemaine_tab',tab)}catch(e){}location.reload()}
+  try{localStorage.setItem('maSemaine_prev',JSON.stringify({at:Date.now(),data:JSON.stringify(S)}))}catch(e){}localStorage.removeItem(K);if(SY.st==='on')lss('maSemaine_forcePush','1');try{sessionStorage.setItem('maSemaine_tab',tab)}catch(e){}location.reload()}
 addEventListener('online',()=>{if(SY.st==='err')syncInit();else push()});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')push()});
 if(!TABS[tab])tab='Accueil';
