@@ -168,6 +168,7 @@ body.sober .tl .h{border-color:#3a333c}body.sober .tl .ev{box-shadow:none}body.s
 .card[data-fold]:not(.fopen)>.fbody{display:none}.card.fopen>.fsum{display:none}
 .fsum{margin-top:8px;font-size:14px;color:var(--mut);line-height:1.4}.fsum.big{font-size:26px;letter-spacing:3px;line-height:1.2}
 .card[data-fold]:not(.fopen){padding-bottom:16px}
+.tgh{margin:14px 0 2px;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#b98aa8}.tgh.late{color:#c0566f}
 /* ===== Mode sobre ===== */
 body.sober{--ink:#e7e0e6;--mut:#a69ca8;--card:#2a252d;--grad:#b88fa3;background:#1d1a1f;background-image:none;color:var(--ink)}
 body.sober .card,body.sober .wday,body.sober .mday{background:#2a252d;border:1px solid #37303a;box-shadow:none;transform:none}
@@ -308,7 +309,7 @@ function dateSheet(title,def,cb,extra='',past=false){window._dcb=cb;openSheet(`<
   <div class="qk"><button class="btn s" onclick="document.getElementById('f_ds').value=TODAY()">Aujourd'hui</button>${past?`<button class="btn s" onclick="document.getElementById('f_ds').value=add(TODAY(),-1)">Hier</button><button class="btn s" onclick="document.getElementById('f_ds').value=add(TODAY(),-2)">Avant-hier</button>`:`<button class="btn s" onclick="document.getElementById('f_ds').value=add(TODAY(),1)">Demain</button><button class="btn s" onclick="document.getElementById('f_ds').value=add(monday(TODAY()),7)">Lundi prochain</button>`}</div>
   <div class="fbtns"><button class="btn" onclick="closeSheet()">Annuler</button><button class="btn p" onclick="const d=$v('f_ds');if(!d)return;closeSheet();window._dcb(d)">Valider</button></div>`)}
 function planTask(id){dateSheet('Pour quel jour ?',TODAY(),d=>{S.tasks.find(x=>x.id==id).date=d;save();render()})}
-function postpone(id){const t=S.tasks.find(x=>x.id==id);t.date=add(t.date||TODAY(),1);save();render()}
+function postpone(id){const t=S.tasks.find(x=>x.id==id);t.date=(!t.date||t.date<=TODAY())?add(TODAY(),1):add(t.date,1);save();render()}
 function subKey(t,ds,sid){return t.id+'|'+(ds||'x')+'|'+sid}
 function toggleSub(id,ds,sid){const t=S.tasks.find(x=>x.id==id),k=subKey(t,ds==='null'?null:ds,sid);if(S.sub[k])delete S.sub[k];else S.sub[k]=1;
   if(ds!=='null'&&t.subs.every(x=>S.sub[subKey(t,ds,x.id)])&&!isDone(t,ds)){save();toggle(id,ds);return}save();render()}
@@ -322,7 +323,7 @@ function taskRow(t,ds,opts=''){
   return `<div class="task ${dn?'done':''}">${ds?`<button class="chk ${dn?'on':''}" onclick="toggle(${t.id},'${ds}')">${dn?'✓':''}</button>`:(!t.recur?`<button class="chk" onclick="doneUndated(${t.id})"></button>`:'')}
   <div class="sp"><div class="row"><span class="tt">${t.prio?'⭐ ':''}${esc(t.title)}</span><span class="sp"></span>${t.time?`<span class="pill">🕐 ${t.time}</span>`:''}${t.dur?`<span class="pill">${t.dur} min</span>`:''}</div>
   ${dn?subCount(t,ds):subsHtml(t,ds)}<div class="row" style="margin-top:6px"><span class="pill cat-${t.cat}">${t.cat}</span>${t.recur?'<span class="pill">🔁</span>':''}
-  ${!dn?`<button class="btn s" onclick="startFocus(${t.id},'${ds||TODAY()}')">🎯 Focus</button>`:''}${ds&&!dn&&!t.recur?`<button class="btn s" onclick="postpone(${t.id})">➡️ Demain</button>`:''}${opts}
+  ${!dn?`<button class="btn s" onclick="startFocus(${t.id},'${ds||TODAY()}')">🎯 Focus</button>`:''}${ds&&!dn&&!t.recur?`<button class="btn s" onclick="postpone(${t.id})">${t.date<=TODAY()?'➡️ Demain':'➡️ +1 jour'}</button>`:''}${opts}
   <button class="btn s" onclick="editTask(${t.id})">Modifier</button></div></div></div>`}
 
 function progressCard(ds){const l=tasksOn(ds),d=l.filter(t=>isDone(t,ds)).length,p=l.length?Math.round(d/l.length*100):0;
@@ -391,15 +392,24 @@ function copyDay(){dateSheet('Copier vers quel jour ?',add(curDay,1),to=>{S.task
 const MENAGE=[['Aspirateur',30],['Serpillière',25],['Poussière',15],['Salle de bain',20],['Toilettes',10],['Cuisine & plan de travail',20],['Changer les draps',15],['Vitres',30],['Nettoyer le frigo',20],['Sortir les poubelles',5],['Ranger le salon',20],['Ranger la chambre',20]];
 function addMenage(i){const[m,d]=MENAGE[i];S.tasks.push({id:uid(),title:m,dur:d,cat:'Maison',prio:false,date:null,recur:null,time:'',subs:[]});save();render()}
 function doneUndated(id){const t=S.tasks.find(x=>x.id==id);t.date=TODAY();toggle(id,TODAY())}
-function vTodo(){const all=S.tasks.filter(t=>!t.recur&&!t.date).sort((a,b)=>(b.prio?1:0)-(a.prio?1:0)),men=all.filter(t=>t.cat==='Maison'),l=all.filter(t=>t.cat!=='Maison');
-  const plan=t=>`<button class="btn s" onclick="planTask(${t.id})">📅 Envoyer vers un jour</button>`,have=new Set(men.map(t=>t.title));
-  return `<div class="card"${FA('todo-gen',l.length?l.length+' tâche'+(l.length>1?'s':'')+' · '+firstTitles(l):'Rien en attente')}><div class="row"><h2 style="margin:0">📝 Ma to-do générale</h2><span class="sp"></span><button class="btn p" onclick="newTask()">+ Ajouter</button></div>
-  <div class="mut">Les choses à faire sans date. Coche-les quand c'est fait, ou planifie-les sur un jour.</div>
-  ${l.map(t=>taskRow(t,null,plan(t))).join('')||'<p class="mut">Rien en attente, bravo 🌷</p>'}</div>
-  <div class="card"${FA('todo-men',men.length?men.length+' tâche'+(men.length>1?'s':'')+(men.some(t=>t.dur)?' · environ '+men.reduce((a,t)=>a+(t.dur||0),0)+' min':'')+' · '+firstTitles(men):'Rien à faire côté ménage')}><div class="row"><h2 style="margin:0">🧹 To-do ménage</h2><span class="sp"></span><button class="btn p" onclick="newTask({cat:'Maison'})">+ Ajouter</button></div>
-  <div class="mut">Tes tâches de la maison sans date. Touche une idée pour l'ajouter en un clic.</div>
+function todoGroups(list){const td=TODAY(),pr=(a,b)=>((b.prio?1:0)-(a.prio?1:0))||((a.time||'99')<(b.time||'99')?-1:1);
+  const und=list.filter(t=>!t.date).sort(pr),late=list.filter(t=>t.date&&t.date<td&&!isDone(t,t.date)).sort((a,b)=>a.date<b.date?-1:1),fut=list.filter(t=>t.date&&t.date>=td).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:pr(a,b));
+  const lab=d=>d===td?'Aujourd\'hui':d===add(td,1)?'Demain':P(d).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+  const row=t=>taskRow(t,t.date||null,`<button class="btn s" onclick="planTask(${t.id})">📅 ${t.date?'Changer le jour':'Choisir un jour'}</button>`);
+  let h='';if(late.length)h+=`<div class="tgh late">⏰ En retard</div>`+late.map(t=>`<div class="mut" style="margin-top:4px">prévu ${lab(t.date)}</div>`+row(t)).join('');
+  if(und.length)h+=`<div class="tgh">🗂️ Sans date</div>`+und.map(row).join('');
+  let last='';fut.forEach(t=>{if(t.date!==last){last=t.date;h+=`<div class="tgh">📅 ${lab(t.date)}</div>`}h+=row(t)});
+  return{h,n:und.length+late.length+fut.filter(t=>!isDone(t,t.date)).length,open:[...late,...und,...fut.filter(t=>!isDone(t,t.date))]}}
+function vTodo(){const td=TODAY(),one=S.tasks.filter(t=>!t.recur&&(!t.date||t.date>=td||!isDone(t,t.date))),men=one.filter(t=>t.cat==='Maison'),l=one.filter(t=>t.cat!=='Maison');
+  const G=todoGroups(l),M=todoGroups(men),have=new Set(M.open.map(t=>t.title));
+  const sum=(g,empty)=>g.n?g.n+' à faire · '+firstTitles(g.open):empty;
+  return `<div class="card"${FA('todo-gen',sum(G,'Rien en attente'))}><div class="row"><h2 style="margin:0">📝 Ma to-do générale</h2><span class="sp"></span><button class="btn p" onclick="newTask()">+ Ajouter</button></div>
+  <div class="mut">Tout ce que tu as à faire, avec ou sans date. Une tâche avec une date apparaît aussi dans ce jour-là, et inversement.</div>
+  ${G.h||'<p class="mut">Rien en attente, bravo 🌷</p>'}</div>
+  <div class="card"${FA('todo-men',M.n?M.n+' à faire'+(M.open.some(t=>t.dur)?' · environ '+M.open.reduce((a,t)=>a+(t.dur||0),0)+' min':'')+' · '+firstTitles(M.open):'Rien à faire côté ménage')}><div class="row"><h2 style="margin:0">🧹 To-do ménage</h2><span class="sp"></span><button class="btn p" onclick="newTask({cat:'Maison'})">+ Ajouter</button></div>
+  <div class="mut">Tes tâches de la maison, avec ou sans date. Touche une idée pour l'ajouter en un clic.</div>
   <div class="qk" style="margin:10px 0 4px">${MENAGE.map((m,i)=>have.has(m[0])?'':`<button class="btn s" onclick="addMenage(${i})">+ ${m[0]}</button>`).join('')}</div>
-  ${men.map(t=>taskRow(t,null,plan(t))).join('')||'<p class="mut">Rien à faire côté ménage pour l\'instant ✨</p>'}</div>`}
+  ${M.h||'<p class="mut">Rien à faire côté ménage pour l\'instant ✨</p>'}</div>`}
 function streak(t){let n=0,ds=TODAY();if(!isDone(t,ds))ds=add(ds,-1);for(let i=0;i<400;i++){if(occurs(t,ds)){if(isDone(t,ds))n++;else break}if(ds<t.recur.start)break;ds=add(ds,-1)}return n}
 function streakTop(){const r=S.tasks.filter(t=>t.recur).map(t=>[t,streak(t)]).sort((a,b)=>b[1]-a[1]);return r.length&&r[0][1]?`<p>🔥 Meilleure série : <b>${esc(r[0][0].title)}</b>, ${r[0][1]} fois d'affilée</p>`:''}
 const FREQ=t=>({daily:'Tous les jours',weekly:'Chaque '+t.recur.days.map(d=>JOURS[d]).join(', '),biweekly:'Une semaine sur deux · '+t.recur.days.map(d=>JOURS[d]).join(', '),monthly:'Le '+P(t.recur.start).getDate()+' de chaque mois'}[t.recur.type]);
