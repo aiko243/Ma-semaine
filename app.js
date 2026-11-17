@@ -297,7 +297,7 @@ if(!S.sportInfo)S.sportInfo={};
 const SPORT_G=[
   {k:'muscu',e:'🏋️',n:'Muscu',items:[['full','Full body'],['haut','Haut du corps'],['bas','Bas du corps'],['pecs','Pecs'],['dos','Dos'],['epaules','Épaules'],['bras','Bras'],['jambes','Jambes'],['fess','Fessiers'],['abdo','Abdos']]},
   {k:'cardio',e:'🏃‍♀️',n:'Cardio',items:[['course','Course'],['cardio','Cardio en salle'],['velo','Vélo'],['nage','Natation'],['marche','Marche']]},
-  {k:'doux',e:'🧘‍♀️',n:'Douceur',items:[['yoga','Yoga'],['pilates','Pilates'],['etir','Étirements']]}];
+  {k:'doux',e:'✨',n:'Autre',items:[['yoga','Yoga'],['pilates','Pilates'],['etir','Étirements']]}];
 const sportGroupOf=k=>SPORT_G.find(g=>g.items.some(x=>x[0]===k));
 const sportEmo=ds=>{const g=sportGroupOf(((S.sportInfo[ds]||{}).t||[])[0]);return g?g.e:'💪'};
 const sportLabel=ds=>{const i=S.sportInfo[ds]||{},t=i.t||[],l=[];
