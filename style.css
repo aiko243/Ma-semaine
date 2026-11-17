@@ -243,3 +243,11 @@ body.sober .tabs .tab.t3{background:#3b5a48!important}body.sober .tabs .tab.t4{b
 body.sober .tabs .tab.t6{background:#424a72!important}body.sober .tabs .tab.t7{background:#6e4440!important}body.sober .tabs .tab.t8{background:#33605a!important}
 body.sober .tabs .tab.t9{background:#5e4c3a!important}body.sober .tabs .tab.t10{background:#5e4363!important}body.sober .tabs .tab.t11{background:#405e3a!important}
 footer{text-align:center;color:var(--mut);font-size:12px;margin-top:20px}
+/* Calendrier sport */
+.spd{border:1.5px solid #f3e8f0;background:#fff;border-radius:12px;min-height:46px;padding:4px 2px;display:flex;flex-direction:column;align-items:center;gap:1px;font:inherit;color:var(--ink)}
+.spd b{font-size:13px}.spd span{font-size:16px;line-height:1;min-height:16px}
+.spd.out{opacity:.35}.spd.today{border-color:var(--pink)}
+.spd.done{background:#e3f6ec;border-color:#9fdcbc}.spd.plan{border-style:dashed;border-color:#f2a7c3;background:#fff5f9}.spd.miss{color:var(--mut)}
+body.sober .spd{background:#2a252d;border-color:#3e3641}body.sober .spd.done{background:#2d3a33;border-color:#6f9c86}body.sober .spd.plan{background:#33293a;border-color:#b88fa3}body.sober .spd.today{border-color:#d8a9be}
+/* Mode sobre : les cases cochées des formulaires restent visibles */
+body.sober .chip:not([class*=" c-"]) input:checked+span{background:#6e5562;border-color:#b88fa3;color:#fbf2f7}

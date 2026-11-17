@@ -257,6 +257,33 @@ async def test_sauvegardes_bloquees(b):
     check('aucune erreur JavaScript', not a.errors and not c.errors, a.errors + c.errors)
 
 
+async def test_sport(b):
+    print('Sport et formulaires')
+    d = await Device.new(b, 'A')
+    await d.js("go('Sport')")
+    await d.wait(700)
+    await d.js("sportTap(add(TODAY(),-1));sportTap(add(TODAY(),2));sportTap(TODAY())")
+    st = await d.js("[S.sport[add(TODAY(),-1)],S.sport[add(TODAY(),2)],S.sport[TODAY()]]")
+    check('jour passé → fait, futur → prévu, aujourd’hui → prévu', st == ['d', 'p', 'p'], st)
+    await d.js("go('Accueil')")
+    await d.wait(700)
+    check('l’accueil rappelle le sport prévu', 'Sport prévu aujourd' in await d.js("document.getElementById('app').innerText"))
+    await d.js("sportToday('d')")
+    check('« C’est fait » le marque fait', await d.js("S.sport[TODAY()]") == 'd')
+    await d.js("sportTap(add(TODAY(),-1))")
+    check('retoucher un jour fait le vide', await d.js("S.sport[add(TODAY(),-1)]") is None)
+    await d.js("toggleSober();newTask({cat:'Sport'})")
+    await d.wait(500)
+    await d.page.click('#f_rep + span')
+    await d.page.select_option('#f_fq', 'weekly')
+    await d.page.click('input[name=f_day][value="3"] + span')
+    bg = await d.js("[...document.querySelectorAll('input[name=f_day]')].map(i=>[i.checked,getComputedStyle(i.nextElementSibling).backgroundColor])")
+    on = {c for k, c in bg if k}
+    off = {c for k, c in bg if not k}
+    check('mode sobre : les jours cochés se voient', on and not (on & off), bg)
+    check('aucune erreur JavaScript', not d.errors, d.errors)
+
+
 async def test_rappels(b):
     print('Rappels')
     d = await Device.new(b, 'A')
@@ -289,7 +316,7 @@ async def test_hors_ligne(b):
     await ctx.set_offline(False)
 
 
-TESTS = [test_onglets, test_fusion_unitaire, test_sync_base, test_sync_premiere_connexion, test_sync_fusion, test_sauvegardes, test_sauvegardes_bloquees, test_rappels, test_hors_ligne]
+TESTS = [test_onglets, test_fusion_unitaire, test_sync_base, test_sync_premiere_connexion, test_sync_fusion, test_sauvegardes, test_sauvegardes_bloquees, test_sport, test_rappels, test_hors_ligne]
 
 
 async def main(filt):
