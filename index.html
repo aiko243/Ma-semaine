@@ -260,7 +260,7 @@ function stickerCard(ds,title,key='stk'){const on=S.stk[ds]||[],mine=stkOf(ds);
   ${stkEdit?'<button class="stk add" onclick="addStk()"><span class="se">＋</span><span class="sn">Nouveau</span></button>':''}</div></div>`}
 const stkLine=(ds,cls)=>{const l=stkOf(ds);return l.length?`<div class="${cls}">${l.map(d=>`<span title="${esc(d.n)}">${d.e}</span>`).join('')}</div>`:''};
 if(!S.sub)S.sub={};if(!S.tpl)S.tpl=[];if(!S.lastDone)S.lastDone={};if(!S.wishCfg)S.wishCfg={wait:7};if(!S.bud)S.bud={tx:[],fixed:[],limits:{}};if(!S.wish)S.wish=[];if(!S.created)S.created=Date.now();
-const save=()=>{localStorage.setItem(K,JSON.stringify(S));try{if(UNDO&&Date.now()-lastSnap>400){UNDO=null;const el=document.getElementById('toast');if(el)el.classList.remove('show')}}catch(e){}};
+const save=()=>{if(window.MS_BOOT){S._mt=Date.now();try{localStorage.setItem('maSemaine_dirty','1')}catch(e){}}localStorage.setItem(K,JSON.stringify(S));try{syncPush()}catch(e){}try{if(UNDO&&Date.now()-lastSnap>400){UNDO=null;const el=document.getElementById('toast');if(el)el.classList.remove('show')}}catch(e){}};
 const CATS=['Perso','Maison','Administratif','Sport','Chat'];
 const JOURS=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
 const uid=()=>Date.now()+Math.floor(Math.random()*999);
@@ -276,7 +276,7 @@ const YEARS=()=>{const c=new Date().getFullYear(),a=[];for(let y=c-5;y<=c+3;y++)
 const MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 const fr=s=>P(s).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let tab='Accueil',curDay=TODAY(),curWeek=monday(TODAY()),curMonth=TODAY().slice(0,7);
+let tab=(()=>{try{const t=sessionStorage.getItem('maSemaine_tab');sessionStorage.removeItem('maSemaine_tab');return t||'Accueil'}catch(e){return'Accueil'}})(),curDay=TODAY(),curWeek=monday(TODAY()),curMonth=TODAY().slice(0,7);
 
 function occurs(t,ds){
   if(!t.recur) return t.date===ds;
@@ -652,14 +652,14 @@ function vReglages(){const ns=notifState();return `<div class="card"><h2>🔔 Al
   <div class="mut">Un rappel 10 minutes avant et à l'heure de tes tâches avec une heure, et à la fin du minuteur Focus.</div>
   <div class="alert" style="margin-top:10px">Ça marche quand l'appli est ouverte ou vient d'être quittée. Si l'iPad la met en veille, les alertes ne partent plus : pour un rappel important, utilise aussi Rappels d'Apple.</div>
   ${ns==='granted'?'<p><b>✅ Alertes activées</b></p>':ns==='denied'?'<p class="mut">Alertes refusées. Pour les réactiver : Réglages de l\'iPad → Notifications → Ma Semaine.</p>':`<button class="btn p" style="width:100%" onclick="askNotif()">Autoriser les alertes</button>`}</div>
-  <div class="card"><h2>💾 Sauvegarde</h2><div class="mut">Dernière sauvegarde : ${S.lastBackup?new Date(S.lastBackup).toLocaleDateString('fr-FR',{day:'numeric',month:'long'}):'jamais'}</div><div class="mut">Crée un fichier avec toutes tes données (range-le dans iCloud Drive), puis importe-le sur ton autre appareil.</div>
+  ${syncCard()}<div class="card"><h2>💾 Sauvegarde</h2><div class="mut">Dernière sauvegarde : ${S.lastBackup?new Date(S.lastBackup).toLocaleDateString('fr-FR',{day:'numeric',month:'long'}):'jamais'}</div><div class="mut">Crée un fichier avec toutes tes données (range-le dans iCloud Drive), puis importe-le sur ton autre appareil.</div>
   <div class="row" style="margin-top:10px"><button class="btn p" onclick="exportData()">Sauvegarder</button><label class="btn">Importer<input type="file" accept=".json,application/json" class="hide" onchange="importData(this.files[0])"></label></div>
-  <button class="btn d" style="margin-top:14px;width:100%" onclick="if(confirm('Tout effacer ? Pense à sauvegarder avant.')){localStorage.removeItem('${K}');location.reload()}">Réinitialiser les données</button></div>`}
+  <button class="btn d" style="margin-top:14px;width:100%" onclick="resetAll()">Réinitialiser les données</button></div>`}
 async function exportData(){const name='ma-semaine-'+TODAY()+'.json',txt=JSON.stringify(S);
   const done=()=>{S.lastBackup=Date.now();S.backupSnooze=0;save();render()};
   try{const f=new File([txt],name,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Sauvegarde Ma Semaine'});done();return}}catch(e){if(e&&e.name==='AbortError')return}
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'application/json'}));a.download=name;a.click();done()}
-function backupCard(){const now=Date.now(),last=S.lastBackup||0,days=Math.floor((now-(last||S.created))/864e5);
+function backupCard(){if(window.SYNC_ON)return'';const now=Date.now(),last=S.lastBackup||0,days=Math.floor((now-(last||S.created))/864e5);
   if((S.backupSnooze||0)>now)return'';if(last?days<7:days<3)return'';if(!S.tasks.length)return'';
   return `<div class="backup"><b>💾 Petite sauvegarde ?</b><div class="mut" style="margin:4px 0 10px">${last?`Ta dernière sauvegarde date de ${days} jours.`:'Tu n\'as encore jamais sauvegardé.'} Tes données ne sont que dans cet appareil, un fichier dans iCloud Drive les met à l'abri.</div>
   <div class="row"><button class="btn p" onclick="exportData()">Sauvegarder maintenant</button><button class="btn s" onclick="S.backupSnooze=Date.now()+2*864e5;save();render()">Plus tard</button></div></div>`}
@@ -693,5 +693,87 @@ function snap(msg){const now=Date.now();if(now-lastSnap<400)return;lastSnap=now;
 function undo(){if(!UNDO)return;S=JSON.parse(UNDO);UNDO=null;save();const el=document.getElementById('toast');if(el)el.classList.remove('show');render()}
 function growPi(e){e.style.height='auto';e.style.height=Math.max(104,Math.ceil(e.scrollHeight/26)*26)+'px'}
 function render(){try{applySober()}catch(e){}try{const h=document.getElementById('ttl');if(h)h.textContent=(TITLES[tab]||'Ma Semaine')+' 🌷'}catch(e){}document.getElementById('tabs').innerHTML=Object.entries(TABS).map(([k,v],i)=>`<button class="tab t${i} ${k===tab?'on':''}" onclick="go('${k}')"><span class="ic">${v[0]}</span>${k}</button>`).join('');document.getElementById('app').innerHTML=TABS[tab][1]();try{document.querySelectorAll('.pi textarea').forEach(growPi)}catch(e){}foldify();try{document.querySelectorAll('.tlw').forEach(w=>{if(!w.offsetParent)return;w.scrollTop=(TLS&&TLS.ds===w.dataset.ds)?TLS.top:+w.dataset.start;TLS={ds:w.dataset.ds,top:w.scrollTop}})}catch(e){}}
+/* ☁️ Synchronisation Firebase : mêmes données sur le téléphone et l'iPad */
+// Configuration du projet Firebase (Console Firebase → Paramètres du projet → Vos applications → Config).
+const FB_CONFIG=null;
+const FBV='10.12.2';
+function lsg(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function lss(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}
+const DEV=lsg('maSemaine_dev')||(()=>{const d='d'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);lss('maSemaine_dev',d);return d})();
+let SY={st:FB_CONFIG?'load':'off',user:null,err:'',busy:false,last:+(lsg('maSemaine_syncAt')||0),pend:null,timer:null,pt:null,fb:null,unsub:null};
+const isDirty=()=>lsg('maSemaine_dirty')==='1';
+function errMsg(e){const c=(e&&e.code)||'';return({'auth/invalid-credential':'E-mail ou mot de passe incorrect.','auth/wrong-password':'Mot de passe incorrect.','auth/user-not-found':'Aucun compte avec cet e-mail.',
+  'auth/email-already-in-use':'Un compte existe déjà avec cet e-mail : connecte-toi.','auth/weak-password':'Mot de passe trop court (6 caractères minimum).','auth/invalid-email':'E-mail invalide.',
+  'auth/missing-password':'Indique ton mot de passe.','auth/network-request-failed':'Pas de connexion internet.','auth/too-many-requests':'Trop d’essais, réessaie dans quelques minutes.',
+  'auth/operation-not-allowed':'Active « Adresse e-mail/Mot de passe » dans Firebase Authentication.','permission-denied':'Accès refusé par le serveur (vérifie les règles Firestore).',
+  'unavailable':'Serveur injoignable, nouvel essai automatique.'})[c]||('Erreur : '+((e&&e.message)||e))}
+async function syncInit(){if(!FB_CONFIG)return;
+  try{const u='https://www.gstatic.com/firebasejs/'+FBV+'/';
+    const[A,Au,Fs]=await Promise.all([import(u+'firebase-app.js'),import(u+'firebase-auth.js'),import(u+'firebase-firestore.js')]);
+    const app=A.initializeApp(FB_CONFIG),auth=Au.getAuth(app),db=Fs.getFirestore(app);SY.fb={Au,Fs,auth,db};SY.err='';
+    Au.onAuthStateChanged(auth,usr=>{SY.user=usr;if(SY.unsub){SY.unsub();SY.unsub=null}
+      if(usr){SY.st='on';window.SYNC_ON=true;listen()}else{SY.st='out';window.SYNC_ON=false}syncUI()})}
+  catch(e){SY.st='err';SY.err='Impossible de joindre le serveur (pas de connexion ?).';syncUI()}}
+const sRef=()=>SY.fb.Fs.doc(SY.fb.db,'users',SY.user.uid);
+function listen(){const uid=SY.user.uid;
+  SY.unsub=SY.fb.Fs.onSnapshot(sRef(),snap=>{if(snap.metadata.hasPendingWrites)return;
+    if(!snap.exists()){lss('maSemaine_syncUid',uid);push(true);return}
+    const r=snap.data(),R=r.updatedAt||0;
+    if(lsg('maSemaine_syncUid')!==uid){lss('maSemaine_syncUid',uid);
+      const hasLocal=S.tasks.length||S.hist.length||Object.keys(S.done).length;
+      if(!hasLocal||confirm('Tes données sont déjà sur le serveur ☁️\n\nOK : récupérer celles du serveur sur cet appareil.\nAnnuler : garder celles de cet appareil et les envoyer au serveur.'))adopt(r);else push(true);return}
+    if(r.device===DEV||R<=SY.last){SY.last=Math.max(SY.last,R);lss('maSemaine_syncAt',SY.last);if(isDirty())push();syncUI();return}
+    if(isDirty()&&(S._mt||0)>R){push(true);return}
+    adopt(r)},e=>{SY.err=errMsg(e);syncUI()})}
+function adopt(r){try{JSON.parse(r.data)}catch(e){return}SY.pend=r;applyPend()}
+function syncIdle(){const a=document.activeElement,sh=document.getElementById('sheet');
+  return!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))&&!(sh&&sh.classList.contains('open'))&&!F.run}
+function applyPend(){const r=SY.pend;if(!r)return;
+  if(isDirty()&&(S._mt||0)>(r.updatedAt||0)){SY.pend=null;push(true);return}
+  if(!syncIdle()){clearTimeout(SY.pt);SY.pt=setTimeout(applyPend,2000);return}
+  SY.pend=null;localStorage.setItem(K,r.data);lss('maSemaine_dirty',null);SY.last=r.updatedAt||0;lss('maSemaine_syncAt',SY.last);
+  try{sessionStorage.setItem('maSemaine_tab',tab);sessionStorage.setItem('maSemaine_y',String(scrollY))}catch(e){}location.reload()}
+function syncPush(){if(SY.st!=='on')return;clearTimeout(SY.timer);SY.timer=setTimeout(()=>push(),1200)}
+async function push(force){if(!SY.user||!SY.fb)return;if(!force&&!isDirty())return;
+  const mt=S._mt||(S._mt=Date.now()),txt=JSON.stringify(S);
+  if(txt.length>950000){SY.err='Données trop volumineuses pour la synchro (limite 1 Mo).';syncUI();return}
+  SY.busy=true;syncUI();
+  try{await SY.fb.Fs.setDoc(sRef(),{data:txt,updatedAt:mt,device:DEV});
+    if((S._mt||0)===mt)lss('maSemaine_dirty',null);SY.last=Math.max(SY.last,mt);lss('maSemaine_syncAt',SY.last);SY.err=''}
+  catch(e){SY.err=errMsg(e)}SY.busy=false;syncUI()}
+const syncVal=id=>{const el=document.getElementById(id);return el?el.value:''};
+async function syncLogin(create){const em=syncVal('sy_em').trim(),pw=syncVal('sy_pw');
+  if(!em||!pw){SY.err='Indique ton e-mail et ton mot de passe 🌸';syncUI();return}
+  SY.err='';SY.busy=true;syncUI();const{Au,auth}=SY.fb;
+  try{await(create?Au.createUserWithEmailAndPassword:Au.signInWithEmailAndPassword)(auth,em,pw)}catch(e){SY.err=errMsg(e)}SY.busy=false;syncUI()}
+async function syncForgot(){const em=syncVal('sy_em').trim();if(!em){SY.err='Écris ton e-mail, puis touche « Mot de passe oublié ».';syncUI();return}
+  try{await SY.fb.Au.sendPasswordResetEmail(SY.fb.auth,em);alert('E-mail envoyé 💌 Regarde ta boîte de réception (et les spams).')}catch(e){SY.err=errMsg(e);syncUI()}}
+async function syncOut(){if(!confirm('Se déconnecter ? Tes données restent sur cet appareil, mais ne se synchronisent plus.'))return;
+  lss('maSemaine_syncUid',null);try{await SY.fb.Au.signOut(SY.fb.auth)}catch(e){}}
+function syncInner(){const t=SY.last?new Date(SY.last).toLocaleString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'jamais';let h='<h2>☁️ Synchronisation</h2>';
+  if(SY.st==='off')h+='<div class="mut">Pas encore configurée : il manque la configuration Firebase dans l’appli.</div>';
+  else if(SY.st==='load')h+='<div class="mut">Connexion au serveur…</div>';
+  else if(SY.st==='err')h+=`<div class="mut">${esc(SY.err)}</div><button class="btn" style="margin-top:8px" onclick="SY.st='load';syncUI();syncInit()">Réessayer</button>`;
+  else if(SY.st==='out')h+=`<div class="mut">Connecte-toi avec le même compte sur ton téléphone et ton iPad : tes données se mettent à jour toutes seules.</div>
+  <span class="fl">E-mail</span><input id="sy_em" type="email" autocomplete="username" autocapitalize="off">
+  <span class="fl">Mot de passe</span><input id="sy_pw" type="password" autocomplete="current-password">
+  <div class="row" style="margin-top:10px"><button class="btn p" onclick="syncLogin(false)"${SY.busy?' disabled':''}>Se connecter</button><button class="btn" onclick="syncLogin(true)"${SY.busy?' disabled':''}>Créer mon compte</button></div>
+  <button class="btn s" style="margin-top:8px" onclick="syncForgot()">Mot de passe oublié ?</button>`;
+  else h+=`<div class="mut">Connecté·e : <b>${esc(SY.user.email||'')}</b></div><div class="mut">${SY.busy?'Envoi en cours…':isDirty()?'Modifications en attente d’envoi':'✅ À jour'} · dernière synchro : ${t}</div>
+  <div class="row" style="margin-top:10px"><button class="btn" onclick="push(true)">Synchroniser maintenant</button><button class="btn s" onclick="syncOut()">Se déconnecter</button></div>`;
+  if(SY.err&&SY.st!=='err')h+=`<div class="alert" style="margin-top:10px">${esc(SY.err)}</div>`;return h}
+const syncCard=()=>`<div class="card" id="syncCard">${syncInner()}</div>`;
+function syncUI(){const el=document.getElementById('syncCard');
+  if(el){const v=[syncVal('sy_em'),syncVal('sy_pw')];el.innerHTML=syncInner();const e2=document.getElementById('sy_em'),p2=document.getElementById('sy_pw');if(e2&&v[0])e2.value=v[0];if(p2&&v[1])p2.value=v[1]}
+  const f=document.querySelector('footer');if(f)f.textContent=SY.st==='on'?'Ma Semaine · tes données sont synchronisées ☁️':'Ma Semaine · tes données restent dans ce navigateur. Pense à sauvegarder 💾'}
+function resetAll(){if(!confirm(SY.st==='on'?'Tout effacer, sur cet appareil ET sur tes autres appareils ? Pense à sauvegarder avant.':'Tout effacer ? Pense à sauvegarder avant.'))return;
+  localStorage.removeItem(K);if(SY.st==='on')lss('maSemaine_forcePush','1');try{sessionStorage.setItem('maSemaine_tab',tab)}catch(e){}location.reload()}
+addEventListener('online',()=>{if(SY.st==='err')syncInit();else push()});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')push()});
+if(!TABS[tab])tab='Accueil';
 render();
+try{const y=+sessionStorage.getItem('maSemaine_y');sessionStorage.removeItem('maSemaine_y');if(y)setTimeout(()=>scrollTo(0,y),50)}catch(e){}
+window.MS_BOOT=1;
+if(lsg('maSemaine_forcePush')){lss('maSemaine_forcePush',null);save()}
+syncInit();
 </script></body></html>
