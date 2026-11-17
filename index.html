@@ -687,7 +687,7 @@ function vReglages(){const ns=notifState();return `<div class="card"><h2>🔔 Al
   <div class="mut">Un rappel 10 minutes avant et à l'heure de tes tâches avec une heure, et à la fin du minuteur Focus.</div>
   <div class="alert" style="margin-top:10px">Ça marche quand l'appli est ouverte ou vient d'être quittée. Si l'iPad la met en veille, les alertes ne partent plus : pour un rappel important, utilise aussi Rappels d'Apple.</div>
   ${ns==='granted'?'<p><b>✅ Alertes activées</b></p>':ns==='denied'?'<p class="mut">Alertes refusées. Pour les réactiver : Réglages de l\'iPad → Notifications → Daily Journal.</p>':`<button class="btn p" style="width:100%" onclick="askNotif()">Autoriser les alertes</button>`}</div>
-  ${syncCard()}<div class="card"><h2>💾 Sauvegarde</h2><div class="mut">Dernière sauvegarde : ${S.lastBackup?new Date(S.lastBackup).toLocaleDateString('fr-FR',{day:'numeric',month:'long'}):'jamais'}</div><div class="mut">Crée un fichier avec toutes tes données (range-le dans iCloud Drive), puis importe-le sur ton autre appareil.</div>
+  ${syncCard()}${prevCard()}<div class="card"><h2>💾 Sauvegarde</h2><div class="mut">Dernière sauvegarde : ${S.lastBackup?new Date(S.lastBackup).toLocaleDateString('fr-FR',{day:'numeric',month:'long'}):'jamais'}</div><div class="mut">Crée un fichier avec toutes tes données (range-le dans iCloud Drive), puis importe-le sur ton autre appareil.</div>
   <div class="row" style="margin-top:10px"><button class="btn p" onclick="exportData()">Sauvegarder</button><label class="btn">Importer<input type="file" accept=".json,application/json" class="hide" onchange="importData(this.files[0])"></label></div>
   <button class="btn d" style="margin-top:14px;width:100%" onclick="resetAll()">Réinitialiser les données</button></div>`}
 async function exportData(){const name='daily-journal-'+TODAY()+'.json',txt=JSON.stringify(S);
@@ -753,28 +753,31 @@ async function syncInit(){if(!FB_CONFIG)return;
   catch(e){SY.st='err';SY.err='Impossible de joindre le serveur (pas de connexion ?).';syncUI()}}
 const sRef=()=>SY.fb.Fs.doc(SY.fb.db,'users',SY.user.uid);
 function listen(){const uid=SY.user.uid;
-  SY.unsub=SY.fb.Fs.onSnapshot(sRef(),snap=>{if(snap.metadata.hasPendingWrites)return;
+  SY.unsub=SY.fb.Fs.onSnapshot(sRef(),{includeMetadataChanges:true},snap=>{if(snap.metadata.hasPendingWrites)return;
+    /* Une réponse « depuis le cache » (réseau lent ou coupé) ne dit rien du serveur : on attend la vraie réponse. */
+    if(snap.metadata.fromCache)return;
+    const first=lsg('maSemaine_syncUid')!==uid;
     if(!snap.exists()){lss('maSemaine_syncUid',uid);push(true);return}
     const r=snap.data(),R=r.updatedAt||0;
-    if(lsg('maSemaine_syncUid')!==uid){lss('maSemaine_syncUid',uid);
-      const hasLocal=S.tasks.length||S.hist.length||Object.keys(S.done).length;
-      if(!hasLocal||confirm('Tes données sont déjà sur le serveur ☁️\n\nOK : récupérer celles du serveur sur cet appareil.\nAnnuler : garder celles de cet appareil et les envoyer au serveur.'))adopt(r);else push(true);return}
+    if(first){lss('maSemaine_syncUid',uid);let d={};try{d=JSON.parse(r.data)}catch(e){}
+      const loc=dataSize(S),rem=dataSize(d);
+      if(!rem&&!d._reset){save();push(true);return}            /* serveur vide : on y envoie cet appareil */
+      if(!loc){adopt(r,true);return}                            /* appareil vide : on récupère le serveur */
+      if(confirm(`Il y a des données à la fois sur cet appareil (${loc} éléments) et sur ton compte (${rem} éléments).\n\nOK : garder celles du COMPTE sur cet appareil (une copie de celles de l’appareil est gardée dans Réglages).\nAnnuler : garder celles de CET APPAREIL et les envoyer sur ton compte.`))adopt(r,true);else{save();push(true)}return}
     if(r.device===DEV||R<=SY.last){SY.last=Math.max(SY.last,R);lss('maSemaine_syncAt',SY.last);if(isDirty())push();syncUI();return}
     if(isDirty()&&(S._mt||0)>R){push(true);return}
     adopt(r)},e=>{SY.err=errMsg(e);syncUI()})}
 const dataSize=d=>((d&&d.tasks)||[]).length+Object.keys((d&&d.done)||{}).length+((d&&d.hist)||[]).length+((d&&d.bud&&d.bud.tx)||[]).length+((d&&d.weights)||[]).length;
-function adopt(r){let d;try{d=JSON.parse(r.data)}catch(e){return}
-  /* Protection : ne jamais remplacer des données bien remplies par une version du serveur presque vide */
-  const loc=dataSize(S),rem=dataSize(d);
-  if(loc>=5&&rem<loc*0.5){try{localStorage.setItem('maSemaine_keep_'+Date.now(),r.data)}catch(e){}
-    save();push(true);setTimeout(()=>alert('🛟 Le serveur avait une version presque vide de tes données.\n\nJ’ai gardé celles de cet appareil et je les ai renvoyées au serveur. Tes autres appareils vont les récupérer.'),300);return}
+function adopt(r,ok){let d;try{d=JSON.parse(r.data)}catch(e){return}
+  /* Protection : un compte vide (sans remise à zéro volontaire) ne remplace jamais des données existantes */
+  if(!ok&&dataSize(d)===0&&!d._reset&&dataSize(S)>0){save();push(true);return}
   SY.pend=r;applyPend()}
 function syncIdle(){const a=document.activeElement,sh=document.getElementById('sheet');
   return!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))&&!(sh&&sh.classList.contains('open'))&&!F.run}
 function applyPend(){const r=SY.pend;if(!r)return;
   if(isDirty()&&(S._mt||0)>(r.updatedAt||0)){SY.pend=null;push(true);return}
   if(!syncIdle()){clearTimeout(SY.pt);SY.pt=setTimeout(applyPend,2000);return}
-  SY.pend=null;localStorage.setItem(K,r.data);lss('maSemaine_dirty',null);SY.last=r.updatedAt||0;lss('maSemaine_syncAt',SY.last);
+  SY.pend=null;try{if(dataSize(S)>0)localStorage.setItem('maSemaine_prev',JSON.stringify({at:Date.now(),data:JSON.stringify(S)}))}catch(e){}localStorage.setItem(K,r.data);lss('maSemaine_dirty',null);SY.last=r.updatedAt||0;lss('maSemaine_syncAt',SY.last);
   try{sessionStorage.setItem('maSemaine_tab',tab);sessionStorage.setItem('maSemaine_y',String(scrollY))}catch(e){}location.reload()}
 function syncPush(){if(SY.st!=='on')return;clearTimeout(SY.timer);SY.timer=setTimeout(()=>push(),1200)}
 async function push(force){if(!SY.user||!SY.fb)return;if(!force&&!isDirty())return;
@@ -827,6 +830,13 @@ function statInfo(){const on=navigator.onLine!==false,acc=SY.st==='on';
   <div class="fbtns"><button class="btn" style="flex:1" onclick="closeSheet()">Fermer</button>${acc?'':'<button class="btn p" style="flex:1" onclick="closeSheet();go(\'Réglages\');setTimeout(()=>{const c=document.getElementById(\'syncCard\');if(c)c.scrollIntoView({behavior:\'smooth\',block:\'center\'})},350)">Me connecter</button>'}</div></div>`)}
 addEventListener('offline',statUI);addEventListener('online',statUI);
 const syncCard=()=>`<div class="card" id="syncCard">${syncInner()}</div>`;
+function prevInfo(){try{const p=JSON.parse(lsg('maSemaine_prev')||'null');if(!p)return null;const d=JSON.parse(p.data);return{at:p.at,n:dataSize(d),data:p.data}}catch(e){return null}}
+function prevCard(){const p=prevInfo();if(!p)return'';return `<div class="card"><h2>🛟 Version précédente</h2><div class="mut">Avant chaque mise à jour venue de ton compte, l’appli garde une copie de ce qu’il y avait sur cet appareil.</div>
+  <div class="mut" style="margin-top:6px">Copie du ${new Date(p.at).toLocaleString('fr-FR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})} · ${p.n} élément${p.n>1?'s':''}</div>
+  <button class="btn" style="margin-top:10px" onclick="restorePrev()">Revenir à cette version</button></div>`}
+function restorePrev(){const p=prevInfo();if(!p)return;if(!confirm('Remplacer les données actuelles par la copie du '+new Date(p.at).toLocaleString('fr-FR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})+' ?'+(SY.st==='on'?' Elle sera aussi envoyée sur tes autres appareils.':'')))return;
+  try{localStorage.setItem('maSemaine_prev',JSON.stringify({at:Date.now(),data:JSON.stringify(S)}))}catch(e){}
+  S=JSON.parse(p.data);S._reset=0;save();push(true);render();alert('C’est fait 🌷')}
 function syncUI(){statUI();const el=document.getElementById('syncCard');
   if(el){const v=[syncVal('sy_em'),syncVal('sy_pw')];el.innerHTML=syncInner();const e2=document.getElementById('sy_em'),p2=document.getElementById('sy_pw');if(e2&&v[0])e2.value=v[0];if(p2&&v[1])p2.value=v[1]}
   const f=document.querySelector('footer');if(f)f.textContent=SY.st==='on'?'Daily Journal · tes données sont synchronisées ☁️':'Daily Journal · tes données restent dans ce navigateur. Pense à sauvegarder 💾'}
@@ -838,6 +848,6 @@ if(!TABS[tab])tab='Accueil';
 render();
 try{const y=+sessionStorage.getItem('maSemaine_y');sessionStorage.removeItem('maSemaine_y');if(y)setTimeout(()=>scrollTo(0,y),50)}catch(e){}
 window.MS_BOOT=1;
-if(lsg('maSemaine_forcePush')){lss('maSemaine_forcePush',null);save()}
+if(lsg('maSemaine_forcePush')){lss('maSemaine_forcePush',null);S._reset=Date.now();save()}
 statUI();syncInit();
 </script></body></html>
