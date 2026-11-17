@@ -762,7 +762,13 @@ function listen(){const uid=SY.user.uid;
     if(r.device===DEV||R<=SY.last){SY.last=Math.max(SY.last,R);lss('maSemaine_syncAt',SY.last);if(isDirty())push();syncUI();return}
     if(isDirty()&&(S._mt||0)>R){push(true);return}
     adopt(r)},e=>{SY.err=errMsg(e);syncUI()})}
-function adopt(r){try{JSON.parse(r.data)}catch(e){return}SY.pend=r;applyPend()}
+const dataSize=d=>((d&&d.tasks)||[]).length+Object.keys((d&&d.done)||{}).length+((d&&d.hist)||[]).length+((d&&d.bud&&d.bud.tx)||[]).length+((d&&d.weights)||[]).length;
+function adopt(r){let d;try{d=JSON.parse(r.data)}catch(e){return}
+  /* Protection : ne jamais remplacer des données bien remplies par une version du serveur presque vide */
+  const loc=dataSize(S),rem=dataSize(d);
+  if(loc>=5&&rem<loc*0.5){try{localStorage.setItem('maSemaine_keep_'+Date.now(),r.data)}catch(e){}
+    save();push(true);setTimeout(()=>alert('🛟 Le serveur avait une version presque vide de tes données.\n\nJ’ai gardé celles de cet appareil et je les ai renvoyées au serveur. Tes autres appareils vont les récupérer.'),300);return}
+  SY.pend=r;applyPend()}
 function syncIdle(){const a=document.activeElement,sh=document.getElementById('sheet');
   return!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))&&!(sh&&sh.classList.contains('open'))&&!F.run}
 function applyPend(){const r=SY.pend;if(!r)return;
