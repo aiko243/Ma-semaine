@@ -695,7 +695,8 @@ function growPi(e){e.style.height='auto';e.style.height=Math.max(104,Math.ceil(e
 function render(){try{applySober()}catch(e){}try{const h=document.getElementById('ttl');if(h)h.textContent=(TITLES[tab]||'Daily Journal')+' 🌷'}catch(e){}document.getElementById('tabs').innerHTML=Object.entries(TABS).map(([k,v],i)=>`<button class="tab t${i} ${k===tab?'on':''}" onclick="go('${k}')"><span class="ic">${v[0]}</span>${k}</button>`).join('');document.getElementById('app').innerHTML=TABS[tab][1]();try{document.querySelectorAll('.pi textarea').forEach(growPi)}catch(e){}foldify();try{document.querySelectorAll('.tlw').forEach(w=>{if(!w.offsetParent)return;w.scrollTop=(TLS&&TLS.ds===w.dataset.ds)?TLS.top:+w.dataset.start;TLS={ds:w.dataset.ds,top:w.scrollTop}})}catch(e){}}
 /* ☁️ Synchronisation Firebase : mêmes données sur le téléphone et l'iPad */
 // Configuration du projet Firebase (Console Firebase → Paramètres du projet → Vos applications → Config).
-const FB_CONFIG=null;
+const FB_CONFIG={apiKey:"AIzaSyAETyemut2x7qEMgSTIYZ_jqcxYLcqFE9U",authDomain:"daily-journal-2c3b0.firebaseapp.com",projectId:"daily-journal-2c3b0",
+  storageBucket:"daily-journal-2c3b0.firebasestorage.app",messagingSenderId:"196580893553",appId:"1:196580893553:web:de6cba773aa0df05be8cd0"};
 const FBV='10.12.2';
 function lsg(k){try{return localStorage.getItem(k)}catch(e){return null}}
 function lss(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}
