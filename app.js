@@ -293,22 +293,34 @@ function sportDone(w){let c=0;for(let j=0;j<7;j++){const ds=add(w,j);if(S.sport[
 function sportPlanned(w){let c=0;for(let j=0;j<7;j++){const ds=add(w,j);if(S.sport[ds]==='p'&&ds>=TODAY())c++}return c}
 /* toucher un jour : passé → fait / vide ; aujourd'hui → prévu / fait / vide ; futur → prévu / vide */
 if(!S.sportInfo)S.sportInfo={};
-const SPORT_T=[['full','🏋️','Full body'],['haut','💪','Haut du corps'],['bas','🦵','Bas du corps'],['fess','🍑','Fessiers'],['abdo','🔥','Abdos'],['cardio','🏃‍♀️','Cardio'],['yoga','🧘‍♀️','Yoga / Pilates'],['marche','🚶‍♀️','Marche'],['nage','🏊‍♀️','Natation']];
-const sportEmo=ds=>{const t=((S.sportInfo[ds]||{}).t||[])[0],d=SPORT_T.find(x=>x[0]===t);return d?d[1]:'💪'};
-const sportLabel=ds=>{const i=S.sportInfo[ds]||{},l=(i.t||[]).map(k=>{const d=SPORT_T.find(x=>x[0]===k);return d?d[1]+' '+d[2]:''}).filter(Boolean);if(i.n)l.push(i.n);return l.join(' · ')};
+/* Types de séance rangés par famille (les clés déjà utilisées restent valables) */
+const SPORT_G=[
+  {k:'muscu',e:'🏋️',n:'Muscu',items:[['full','Full body'],['haut','Haut du corps'],['bas','Bas du corps'],['pecs','Pecs'],['dos','Dos'],['epaules','Épaules'],['bras','Bras'],['jambes','Jambes'],['fess','Fessiers'],['abdo','Abdos']]},
+  {k:'cardio',e:'🏃‍♀️',n:'Cardio',items:[['course','Course'],['cardio','Cardio en salle'],['velo','Vélo'],['nage','Natation'],['marche','Marche']]},
+  {k:'doux',e:'🧘‍♀️',n:'Douceur',items:[['yoga','Yoga'],['pilates','Pilates'],['etir','Étirements']]}];
+const sportGroupOf=k=>SPORT_G.find(g=>g.items.some(x=>x[0]===k));
+const sportEmo=ds=>{const g=sportGroupOf(((S.sportInfo[ds]||{}).t||[])[0]);return g?g.e:'💪'};
+const sportLabel=ds=>{const i=S.sportInfo[ds]||{},t=i.t||[],l=[];
+  SPORT_G.forEach(g=>{const n=g.items.filter(x=>t.includes(x[0])).map(x=>x[1]);if(n.length)l.push(g.e+' '+n.join(', '))});if(i.n)l.push(i.n);return l.join(' · ')};
 /* état d'un jour : 'p' prévu, 'd' fait ; type(s) et note facultatifs */
 function sportSet(ds,st,types,note){const cur=S.sport[ds];
   if(st==='d'&&cur!=='d')S.stars++;if(cur==='d'&&st!=='d')S.stars=Math.max(0,S.stars-1);
   if(st)S.sport[ds]=st;else delete S.sport[ds];
   const info={};if(st&&types&&types.length)info.t=types;if(st&&note)info.n=note;
   if(Object.keys(info).length)S.sportInfo[ds]=info;else delete S.sportInfo[ds];save();render()}
-function sportTap(ds,force){const td=TODAY(),cur=force||S.sport[ds]||(ds<=td?'d':'p'),info=S.sportInfo[ds]||{},sel=info.t||[];
+function sportTap(ds,force){const td=TODAY(),cur=force||S.sport[ds]||(ds<=td?'d':'p'),info=S.sportInfo[ds]||{},sel=info.t||[],open=(sportGroupOf(sel[0])||SPORT_G[0]).k;
   openSheet(`<h3 style="text-transform:capitalize">${fr(ds)}</h3>
   <div class="chips"><label class="chip"><input type="radio" name="sp_st" value="p" ${cur==='p'?'checked':''}><span>🗓️ Prévu</span></label><label class="chip"><input type="radio" name="sp_st" value="d" ${cur==='d'?'checked':''}><span>💪 Fait</span></label></div>
   <span class="fl">Type de séance (facultatif)</span>
-  <div class="chips">${SPORT_T.map(([k,e,n])=>`<label class="chip"><input type="checkbox" name="sp_t" value="${k}" ${sel.includes(k)?'checked':''}><span>${e} ${n}</span></label>`).join('')}</div>
-  <span class="fl">Note (facultatif)</span><input id="sp_n" value="${esc(info.n||'')}" placeholder="ex : jambes + gainage, 5 km…">
-  <div class="fbtns">${S.sport[ds]?`<button class="btn d" onclick="closeSheet();sportSet('${ds}','')">Effacer</button>`:''}<button class="btn" onclick="closeSheet()">Annuler</button><button class="btn p" onclick="sportSave('${ds}')">Enregistrer</button></div>`)}
+  <div class="spg">${SPORT_G.map(g=>`<button type="button" class="spgb ${g.k===open?'on':''}" data-g="${g.k}" onclick="spGroup('${g.k}')">${g.e} ${g.n}<i id="spc_${g.k}"></i></button>`).join('')}</div>
+  ${SPORT_G.map(g=>`<div class="chips spp" data-g="${g.k}" style="${g.k===open?'':'display:none'}">${g.items.map(([k,n])=>`<label class="chip"><input type="checkbox" name="sp_t" value="${k}" ${sel.includes(k)?'checked':''} onchange="spCount()"><span>${n}</span></label>`).join('')}</div>`).join('')}
+  <div class="mut" id="sp_sum" style="margin-top:8px;min-height:18px"></div>
+  <span class="fl">Note (facultatif)</span><input id="sp_n" value="${esc(info.n||'')}" placeholder="ex : 5 km, séance courte…">
+  <div class="fbtns">${S.sport[ds]?`<button class="btn d" onclick="closeSheet();sportSet('${ds}','')">Effacer</button>`:''}<button class="btn" onclick="closeSheet()">Annuler</button><button class="btn p" onclick="sportSave('${ds}')">Enregistrer</button></div>`);spCount()}
+function spGroup(k){document.querySelectorAll('.spgb').forEach(b=>b.classList.toggle('on',b.dataset.g===k));document.querySelectorAll('.spp').forEach(p=>p.style.display=p.dataset.g===k?'':'none')}
+function spCount(){const t=[...document.querySelectorAll('input[name="sp_t"]:checked')].map(x=>x.value),l=[];
+  SPORT_G.forEach(g=>{const n=g.items.filter(x=>t.includes(x[0])).map(x=>x[1]),c=document.getElementById('spc_'+g.k);if(c)c.textContent=n.length?' '+n.length:'';if(n.length)l.push(g.e+' '+n.join(', '))});
+  const el=document.getElementById('sp_sum');if(el)el.textContent=l.length?'Choisi : '+l.join(' · '):''}
 function sportSave(ds){const st=$r('sp_st')||'d',t=[...document.querySelectorAll('input[name="sp_t"]:checked')].map(x=>x.value),n=$v('sp_n').trim();closeSheet();sportSet(ds,st,t,n)}
 function sportToday(){sportTap(TODAY(),'d')}
 function shiftSport(n){const[y,m]=sportMonth.split('-').map(Number);sportMonth=iso(new Date(y,m-1+n,1)).slice(0,7);render()}

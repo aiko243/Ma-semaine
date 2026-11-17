@@ -251,3 +251,8 @@ footer{text-align:center;color:var(--mut);font-size:12px;margin-top:20px}
 body.sober .spd{background:#2a252d;border-color:#3e3641}body.sober .spd.done{background:#2d3a33;border-color:#6f9c86}body.sober .spd.plan{background:#33293a;border-color:#b88fa3}body.sober .spd.today{border-color:#d8a9be}
 /* Mode sobre : les cases cochées des formulaires restent visibles */
 body.sober .chip:not([class*=" c-"]) input:checked+span{background:#6e5562;border-color:#b88fa3;color:#fbf2f7}
+/* Fiche sport : familles de séances */
+.spg{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.spgb{border:1.5px solid #eadff0;background:#fff;border-radius:14px;padding:8px 12px;font:inherit;font-weight:700;font-size:14px;color:var(--mut)}
+.spgb.on{border-color:#f2a7c3;color:var(--ink);background:#fff5f9}.spgb i{font-style:normal;color:#b0446f}
+body.sober .spgb{background:#221e24;border-color:#3e3641;color:#a69ca8}body.sober .spgb.on{background:#3a3040;border-color:#b88fa3;color:#f3e9ef}body.sober .spgb i{color:#e2c1d2}
