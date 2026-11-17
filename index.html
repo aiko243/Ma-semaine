@@ -392,21 +392,25 @@ const MSG=['Une étape à la fois ! ✨','Même 5 minutes, ça compte 💗','Tu 
 
 function routineLine(t,ds){const dn=isDone(t,ds),st=streak(t);
   return `<div class="rline ${dn?'done':''}"><button class="chk ${dn?'on':''}" onclick="toggle(${t.id},'${ds}')">${dn?'✓':''}</button><span class="tt">${t.prio?'⭐ ':''}${esc(t.title)}${!dn?subsHtml(t,ds):''}</span>${t.time?`<span class="pill">🕐 ${t.time}</span>`:''}${dn?subCount(t,ds):''}${st?`<span class="pill">🔥 ${st}</span>`:''}${t.dur?`<span class="pill">${t.dur} min</span>`:''}${!dn?`<button class="btn s" onclick="startFocus(${t.id},'${ds}')">🎯</button>`:''}</div>`}
-function vAccueil(){const ds=TODAY(),d=P(ds),all=tasksOn(ds),rt=all.filter(t=>t.recur),tk=all.filter(t=>!t.recur),done=all.filter(t=>isDone(t,ds)).length,pc=all.length?Math.round(done/all.length*100):0,rdone=rt.filter(t=>isDone(t,ds)).length;
+function vAccueil(){const ds=curDay,isT=ds===TODAY(),d=P(ds),all=tasksOn(ds),rt=all.filter(t=>t.recur),tk=all.filter(t=>!t.recur),done=all.filter(t=>isDone(t,ds)).length,pc=all.length?Math.round(done/all.length*100):0,rdone=rt.filter(t=>isDone(t,ds)).length;
   return `<div class="card"><span class="stick" style="right:14px;top:6px">🌷</span><span class="stick" style="right:52px;top:14px;font-size:20px">✨</span>
-  <div class="ph"><div class="stamp"><div><b>${d.getDate()}</b><small>${['JANV','FÉV','MARS','AVR','MAI','JUIN','JUIL','AOÛT','SEPT','OCT','NOV','DÉC'][d.getMonth()]}</small></div></div>
+  <div class="row" style="margin-top:26px;flex-wrap:nowrap"><button class="btn" onclick="curDay=add(curDay,-1);render()" aria-label="Jour précédent">‹</button><input type="date" value="${ds}" onchange="if(this.value){curDay=this.value;render()}" style="flex:1;min-width:0;max-width:190px;margin:0 auto;padding:6px 8px;font-size:13px;text-align:center" aria-label="Choisir un jour"><button class="btn" onclick="curDay=add(curDay,1);render()" aria-label="Jour suivant">›</button></div>
+  ${isT?'':`<div style="text-align:center;margin-top:8px"><button class="btn s" onclick="curDay=TODAY();render()">↩️ Revenir à aujourd'hui</button></div>`}
+  <div class="ph" style="padding-top:14px"><div class="stamp"><div><b>${d.getDate()}</b><small>${['JANV','FÉV','MARS','AVR','MAI','JUIN','JUIL','AOÛT','SEPT','OCT','NOV','DÉC'][d.getMonth()]}</small></div></div>
   <div><div class="wd">${d.toLocaleDateString('fr-FR',{weekday:'long'})}</div><div class="mo">${d.getDate()} ${MOIS[d.getMonth()]} ${d.getFullYear()} · semaine ${isoWeek(ds).w}</div></div></div>
   <div class="boost" style="margin-top:16px">${MSG[d.getDate()%MSG.length]}</div>
-  <div class="bar" style="margin-top:14px"><i style="width:${pc}%"></i></div><div class="row mut" style="margin-top:6px"><span>${done}/${all.length} fait aujourd'hui</span><span class="sp"></span><span>⭐ ${S.stars} étoiles</span></div></div>
-  ${backupCard()}${catAlerts()}
-  <div class="card"${FA('acc-rout',rt.length?`${rdone}/${rt.length} faites`+(rt.filter(t=>!isDone(t,ds)).length?' · reste : '+firstTitles(rt.filter(t=>!isDone(t,ds))):' · tout est fait 🎉'):'Pas de routine aujourd’hui')}><div class="row"><h2 style="margin:0">☀️ Ma routine</h2><span class="sp"></span><span class="lbl">${rdone}/${rt.length}</span></div>
-  <div style="margin-top:8px">${rt.map(t=>routineLine(t,ds)).join('')||'<p class="mut">Pas encore de routine aujourd\'hui.</p>'}</div>
-  <div class="row" style="margin-top:10px"><button class="btn" onclick="newRoutine()">+ Routine</button><button class="btn s" onclick="go('Routines')">Gérer mes routines</button></div></div>
+  <div class="bar" style="margin-top:14px"><i style="width:${pc}%"></i></div><div class="row mut" style="margin-top:6px"><span>${done}/${all.length} fait ${isT?'aujourd\'hui':'ce jour-là'}</span><span class="sp"></span><span>⭐ ${S.stars} étoiles</span></div></div>
+  ${isT?backupCard()+catAlerts():''}
+  <div class="card"${FA('acc-rout',rt.length?`${rdone}/${rt.length} faites`+(rt.filter(t=>!isDone(t,ds)).length?' · reste : '+firstTitles(rt.filter(t=>!isDone(t,ds))):' · tout est fait 🎉'):'Pas de routine ce jour-là')}><div class="row"><h2 style="margin:0">☀️ Ma routine</h2><span class="sp"></span><span class="lbl">${rdone}/${rt.length}</span></div>
+  <div style="margin-top:8px">${rt.map(t=>routineLine(t,ds)).join('')||'<p class="mut">Pas de routine ce jour-là.</p>'}</div>
+  <div class="row" style="margin-top:10px"><button class="btn" onclick="newRoutine()">+ Routine</button><button class="btn s" onclick="goOpen('To-do','rout')">Gérer mes routines</button></div></div>
   ${stickerCard(ds,'✨ Ma journée en stickers','acc-stk')}
-  <div class="card"${FA('acc-todo',tk.length?`${tk.filter(t=>isDone(t,ds)).length}/${tk.length} faites`+(tk.filter(t=>!isDone(t,ds)).length?' · '+firstTitles(tk.filter(t=>!isDone(t,ds))):''):'Rien d’autre de prévu')}><div class="row"><h2 style="margin:0">📋 To-do du jour</h2><span class="sp"></span><button class="btn" onclick="newTask({date:TODAY()})">+ Ajouter</button></div>
+  <div class="card"${FA('acc-todo',tk.length?`${tk.filter(t=>isDone(t,ds)).length}/${tk.length} faites`+(tk.filter(t=>!isDone(t,ds)).length?' · '+firstTitles(tk.filter(t=>!isDone(t,ds))):''):'Rien d’autre de prévu')}><div class="row"><h2 style="margin:0">📋 To-do du jour</h2><span class="sp"></span><button class="btn" onclick="newTask({date:curDay})">+ Ajouter</button></div>
   ${tk.map(t=>taskRow(t,ds)).join('')||'<p class="mut">Rien d\'autre de prévu, profite 🌸</p>'}
-</div>
-  <button class="btn p flemme" style="margin:0 0 6px" onclick="flemme()">🙈 J'ai la flemme, choisis pour moi</button>
+  <button class="btn" style="margin-top:10px" onclick="copyDay()">📋 Copier cette to-do vers un autre jour</button>
+  <div class="row" style="margin-top:8px"><button class="btn s" onclick="tplApplySheet()">🗂️ Appliquer un modèle</button><button class="btn s" onclick="tplSaveSheet()">💾 Enregistrer comme modèle</button></div></div>
+  ${timeline(ds)}
+  ${isT?'<button class="btn p flemme" style="margin:0 0 6px" onclick="flemme()">🙈 J\'ai la flemme, choisis pour moi</button>':''}
   <div class="card"${FA('acc-pi',(()=>{const f=S.postits.filter(n=>n.t.trim());return f.length?f.length+' post-it · '+f[0].t.trim().split('\n')[0].slice(0,40):'Aucune note'})())}><div class="row"><h2 style="margin:0">💖 Pense-bête</h2><span class="sp"></span><button class="btn" onclick="addPostit()">+ Post-it</button></div>
   <div class="postits">${S.postits.map(n=>`<div class="pi c${n.c}"><button class="x" onclick="delPostit(${n.id})">✕</button><textarea placeholder="Note ici..." oninput="S.postits.find(x=>x.id==${n.id}).t=this.value;save();growPi(this)">${esc(n.t)}</textarea></div>`).join('')}</div></div>`}
 function addPostit(){S.postits.push({id:uid(),t:'',c:S.postits.length%5});save();render()}
@@ -414,7 +418,7 @@ function delPostit(id){snap('Post-it supprimé');S.postits=S.postits.filter(x=>x
 
 function vMois(){const [y,m]=curMonth.split('-').map(Number);const first=new Date(y,m-1,1);let d=monday(iso(first));const cells=[];
   for(let i=0;i<42;i++){const ds=add(d,i);const l=tasksOn(ds);
-    cells.push(`<div class="mday ${ds.slice(0,7)!==curMonth?'out':''} ${ds===TODAY()?'today':''}" onclick="curDay='${ds}';go('Jour')"><b>${P(ds).getDate()}</b>${stkLine(ds,'mstk')}${l.slice(0,3).map(t=>`<span class="dot cat-${t.cat}" style="${isDone(t,ds)?'text-decoration:line-through;opacity:.6':''}">${esc(t.title)}</span>`).join('')}${l.length>3?`<span class="mut">+${l.length-3}</span>`:''}</div>`)}
+    cells.push(`<div class="mday ${ds.slice(0,7)!==curMonth?'out':''} ${ds===TODAY()?'today':''}" onclick="curDay='${ds}';go('Accueil')"><b>${P(ds).getDate()}</b>${stkLine(ds,'mstk')}${l.slice(0,3).map(t=>`<span class="dot cat-${t.cat}" style="${isDone(t,ds)?'text-decoration:line-through;opacity:.6':''}">${esc(t.title)}</span>`).join('')}${l.length>3?`<span class="mut">+${l.length-3}</span>`:''}</div>`)}
   return `<div class="card"><div class="row"><button class="btn" onclick="shiftMonth(-1)">‹</button><span class="sp row" style="justify-content:center"><select class="sel" onchange="curMonth=${y}+'-'+String(+this.value+1).padStart(2,'0');render()">${MOIS.map((x,i)=>`<option value="${i}" ${i===m-1?'selected':''}>${x}</option>`).join('')}</select><select class="sel" onchange="curMonth=this.value+'-'+String(${m}).padStart(2,'0');render()">${YEARS().concat(YEARS().includes(y)?[]:[y]).sort().map(a=>`<option ${a===y?'selected':''}>${a}</option>`).join('')}</select></span><button class="btn" onclick="shiftMonth(1)">›</button></div>
   <div style="text-align:center;margin-top:8px"><button class="btn s" onclick="curMonth=TODAY().slice(0,7);render()">Aujourd'hui</button></div>
   <div class="grid7" style="margin-top:12px">${['L','M','M','J','V','S','D'].map(x=>`<div class="mut" style="text-align:center">${x}</div>`).join('')}${cells.join('')}</div></div>`}
@@ -426,7 +430,7 @@ function dragStart(e,id,from){e.preventDefault();const li=e.target.closest('li')
 function shiftMonth(n){const[y,m]=curMonth.split('-').map(Number);curMonth=iso(new Date(y,m-1+n,1)).slice(0,7);render()}
 
 function vSemaine(){let tot=0,dn=0;const days=[...Array(7)].map((_,i)=>{const ds=add(curWeek,i),l=tasksOn(ds);tot+=l.length;dn+=l.filter(t=>isDone(t,ds)).length;
-  return `<div class="wday ${ds===TODAY()?'today':''}" data-ds="${ds}"><div class="row"><b style="text-transform:capitalize">${P(ds).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric'})}</b><span class="sp"></span><button class="btn s" onclick="curDay='${ds}';go('Jour')">Voir</button></div>${stkLine(ds,'wstk')}
+  return `<div class="wday ${ds===TODAY()?'today':''}" data-ds="${ds}"><div class="row"><b style="text-transform:capitalize">${P(ds).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric'})}</b><span class="sp"></span><button class="btn s" onclick="curDay='${ds}';go('Accueil')">Voir</button></div>${stkLine(ds,'wstk')}
   <ul class="wl">${l.map(t=>`<li style="${isDone(t,ds)?'text-decoration:line-through;color:#aaa':''}">${!t.recur?`<span class="dh" onpointerdown="dragStart(event,${t.id},'${ds}')">⠿</span>`:'<span class="dh off">🔁</span>'}${t.prio?'⭐':''}${esc(t.title)}</li>`).join('')||'<li class="mut">Libre 🌸</li>'}</ul></div>`});
   const wk=curWeek,rv=S.reviews[wk]||'',iw=isoWeek(curWeek);
   return `<div class="card"><div class="row"><button class="btn" onclick="curWeek=add(curWeek,-7);render()">‹</button><span class="sp" style="text-align:center"><h2 style="margin:0">Semaine ${iw.w}</h2><div class="mut">du ${P(curWeek).toLocaleDateString('fr-FR',{day:'numeric',month:'long'})} au ${P(add(curWeek,6)).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</div></span><button class="btn" onclick="curWeek=add(curWeek,7);render()">›</button></div>
@@ -445,13 +449,6 @@ function timeline(ds){const ts=tasksOn(ds).filter(t=>t.time);const PX=60;
   <div class="tlw" data-ds="${ds}" data-start="${(ds===TODAY()&&(nm<first*60||nm>21*60)?Math.max(0,Math.floor(nm/60)-1):first)*PX-6}" onscroll="TLS={ds:this.dataset.ds,top:this.scrollTop}"><div class="tl" style="height:${(h1-h0)*PX+8}px;margin-top:10px">${[...Array(h1-h0+1)].map((_,i)=>`<div class="h" style="top:${i*PX}px"><span>${String(h0+i).padStart(2,'0')}h</span></div>`).join('')}
   ${evs.map(e=>`<div class="ev ${isDone(e.t,ds)?'dn':''} cat-${e.t.cat}" onclick="editTask(${e.t.id})" style="top:${(e.st-h0*60)/60*PX+1}px;height:${(e.en-e.st)/60*PX-3}px;background:${COL[e.t.cat]};left:calc(46px + (100% - 50px)*${e.c}/${nc});right:auto;width:calc((100% - 50px)/${nc} - 4px)">${e.t.prio?'⭐ ':''}${esc(e.t.title)}<small>${e.t.time}${e.t.dur?' · '+e.t.dur+' min':''}</small></div>`).join('')}
   ${ds===TODAY()?`<div class="now" style="top:${(nm-h0*60)/60*PX}px"></div>`:''}</div></div><div class="mut" style="margin-top:6px;text-align:center">↕️ Fais défiler pour voir toute la journée</div></div>`}
-function vJour(){const ds=curDay,l=tasksOn(ds);
-  return `<div class="card"><div class="row"><button class="btn" onclick="curDay=add(curDay,-1);render()">‹</button><span class="sp" style="text-align:center"><h2 style="margin:0;text-transform:capitalize">${fr(ds)}</h2></span><button class="btn" onclick="curDay=add(curDay,1);render()">›</button></div>
-  <input type="date" value="${ds}" style="margin-top:10px" onchange="curDay=this.value;render()"></div>${stickerCard(ds,'✨ Mes stickers','jour-stk')}${timeline(ds)}${progressCard(ds)}
-  <div class="card"${FA('jour-todo',l.length?`${l.filter(t=>isDone(t,ds)).length}/${l.length} faites`+(l.filter(t=>!isDone(t,ds)).length?' · '+firstTitles(l.filter(t=>!isDone(t,ds))):''):'Aucune tâche ce jour-là')}><div class="row"><h2 style="margin:0">Ma to-do</h2><span class="sp"></span><button class="btn" onclick="newTask({date:curDay})">+ Ajouter</button></div>
-  ${l.map(t=>taskRow(t,ds)).join('')||'<p class="mut">Aucune tâche ce jour-là.</p>'}
-  <button class="btn" style="margin-top:10px" onclick="copyDay()">📋 Copier cette to-do vers un autre jour</button>
-  <div class="row" style="margin-top:8px"><button class="btn s" onclick="tplApplySheet()">🗂️ Appliquer un modèle</button><button class="btn s" onclick="tplSaveSheet()">💾 Enregistrer comme modèle</button></div></div>`}
 function tplSaveSheet(){const l=S.tasks.filter(t=>!t.recur&&t.date===curDay);if(!l.length){alert('Ajoute d\'abord des tâches à ce jour, puis enregistre-le comme modèle 🌸');return}
   openSheet(`<h3>Nouveau modèle de journée</h3><div class="mut">${l.length} tâche${l.length>1?'s':''} : ${esc(l.map(t=>t.title).join(', '))}</div><span class="fl">Nom du modèle</span><input id="f_tn" placeholder="ex : Journée labo, Dimanche ménage…" autofocus>
   <div class="fbtns"><button class="btn" onclick="closeSheet()">Annuler</button><button class="btn p" onclick="tplSave()">Enregistrer</button></div>`)}
@@ -470,8 +467,8 @@ function searchRun(q){q=norm(q).trim();const el=document.getElementById('sres');
   S.postits.forEach(n=>{if(norm(n.t).includes(q))r.push(['💖',n.t.split('\n')[0].slice(0,50),'Post-it',`openRes('p',${n.id})`])});
   (S.bud.tx||[]).forEach(x=>{if(norm(x.note).includes(q)||norm(x.cat).includes(q))r.push(['💶',(x.note||x.cat),fr(x.d)+' · '+eur(x.amt),`openRes('b',${x.id})`])});
   el.innerHTML=r.length?r.slice(0,40).map(x=>`<button class="sr" onclick="${x[3]}"><span style="font-size:20px">${x[0]}</span><span class="sp"><b>${esc(x[1])}</b><small>${esc(x[2])}</small></span></button>`).join(''):'<p class="mut">Rien trouvé 🌸</p>'}
-function goOpen(t,k){if(k){S.fold[k]=1;save()}closeSheet();if(tab===t)render();else go(t)}
-function openRes(k,id){if(k==='t'){const t=S.tasks.find(x=>x.id==id);if(t.recur)goOpen('Routines','rout');else if(t.date){curDay=t.date;goOpen('Jour','jour-todo')}else goOpen('To-do',t.cat==='Maison'?'todo-men':'todo-gen')}
+function goOpen(t,k){if(!S.fold)S.fold={};if(k){S.fold[k]=1;save()}closeSheet();if(tab===t)render();else go(t)}
+function openRes(k,id){if(k==='t'){const t=S.tasks.find(x=>x.id==id);if(t.recur)goOpen('To-do','rout');else if(t.date){curDay=t.date;goOpen('Accueil','acc-todo')}else goOpen('To-do',t.cat==='Maison'?'todo-men':'todo-gen')}
   else if(k==='w')goOpen('Achats','ach-wish');else if(k==='p')goOpen('Accueil','acc-pi');else if(k==='b'){const x=S.bud.tx.find(y=>y.id==id);budMonth=x.d.slice(0,7);goOpen('Budget','bud-ops')}}
 function copyDay(){dateSheet('Copier vers quel jour ?',add(curDay,1),to=>{S.tasks.filter(t=>!t.recur&&t.date===curDay).forEach(t=>S.tasks.push({...t,id:uid(),date:to,subs:(t.subs||[]).map(x=>({...x}))}));save();curDay=to;render()})}
 
@@ -500,11 +497,11 @@ function vTodo(){const td=TODAY(),one=S.tasks.filter(t=>!t.recur&&(!t.date||t.da
   <div class="card"${FA('todo-men',M.n?M.n+' à faire'+(M.open.some(t=>t.dur)?' · environ '+M.open.reduce((a,t)=>a+(t.dur||0),0)+' min':'')+' · '+firstTitles(M.open):'Rien à faire côté ménage')}><div class="row"><h2 style="margin:0">🧹 To-do ménage</h2><span class="sp"></span><button class="btn p" onclick="newTask({cat:'Maison'})">+ Ajouter</button></div>
   <div class="mut">Tes tâches de la maison, avec ou sans date. L'appli retient quand tu as fait chaque chose.</div>
   <div class="fl" style="margin-top:10px">À prévoir, du plus urgent au moins urgent</div><div class="mchips">${menageChips(have)}</div><div class="mut" style="margin:4px 0 6px">« + » l'ajoute à ta liste, « ✓ » note que tu viens de le faire. Ce qui est en rose commence à dater.</div>
-  ${M.h||'<p class="mut">Rien à faire côté ménage pour l\'instant ✨</p>'}</div>`}
+  ${M.h||'<p class="mut">Rien à faire côté ménage pour l\'instant ✨</p>'}</div>${routinesCard()}`}
 function streak(t){let n=0,ds=TODAY();if(!isDone(t,ds))ds=add(ds,-1);for(let i=0;i<400;i++){if(occurs(t,ds)){if(isDone(t,ds))n++;else break}if(ds<t.recur.start)break;ds=add(ds,-1)}return n}
 function streakTop(){const r=S.tasks.filter(t=>t.recur).map(t=>[t,streak(t)]).sort((a,b)=>b[1]-a[1]);return r.length&&r[0][1]?`<p>🔥 Meilleure série : <b>${esc(r[0][0].title)}</b>, ${r[0][1]} fois d'affilée</p>`:''}
 const FREQ=t=>({daily:'Tous les jours',weekly:'Chaque '+t.recur.days.map(d=>JOURS[d]).join(', '),biweekly:'Une semaine sur deux · '+t.recur.days.map(d=>JOURS[d]).join(', '),monthly:'Le '+P(t.recur.start).getDate()+' de chaque mois',every:'Tous les '+(t.recur.n||2)+' jours'}[t.recur.type]);
-function vRoutines(){const l=S.tasks.filter(t=>t.recur),ds=TODAY();
+function routinesCard(){const l=S.tasks.filter(t=>t.recur),ds=TODAY();
   return `<div class="card"${FA('rout',l.length?l.length+' routine'+(l.length>1?'s':'')+' · '+firstTitles(l,3):'Pas encore de routine')}><div class="row"><h2 style="margin:0">🔁 Mes routines</h2><span class="sp"></span><button class="btn p" onclick="newRoutine()">+ Ajouter</button></div>
   <div class="mut">Elles apparaissent toutes seules dans les bons jours.</div>
   ${l.map(t=>{const s=streak(t);return `<div><div class="mut" style="margin-top:10px">${FREQ(t)} ${s?`· 🔥 ${s} d'affilée`:''}</div>${taskRow(t,occurs(t,ds)?ds:null)}</div>`}).join('')||'<p class="mut">Pas encore de routine.</p>'}</div>`}
@@ -702,8 +699,8 @@ function backupCard(){if(window.SYNC_ON)return'';const now=Date.now(),last=S.las
   <div class="row"><button class="btn p" onclick="exportData()">Sauvegarder maintenant</button><button class="btn s" onclick="S.backupSnooze=Date.now()+2*864e5;save();render()">Plus tard</button></div></div>`}
 function importData(f){if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.tasks)throw 0;if(confirm('Remplacer les données de cet appareil par celles du fichier ?')){S=d;save();render();alert('Importé ! 🎉')}}catch(e){alert('Fichier non reconnu 😕')}};r.readAsText(f)}
 
-const TITLES={Accueil:'Mon récap',Routines:'Mes routines',Mois:'Mon mois',Semaine:'Ma semaine',Jour:'Ma journée','To-do':'À faire',Focus:'Mon focus','Trophées':'Mes trophées',Sport:'Mon sport',Achats:'Mes achats',Budget:'Mon budget','Réglages':'Mes réglages'};
-const TABS={Accueil:['🏡',vAccueil],Routines:['🔁',vRoutines],Mois:['🗓️',vMois],Semaine:['📆',vSemaine],Jour:['☀️',vJour],'To-do':['📝',vTodo],Focus:['🎯',vFocus],'Trophées':['🏆',vProgres],Sport:['💪',vSport],Achats:['🛍️',vAchats],Budget:['💶',vBudget],'Réglages':['💾',vReglages]};
+const TITLES={Accueil:'Mon récap',Mois:'Mon mois',Semaine:'Ma semaine','To-do':'À faire',Focus:'Mon focus','Trophées':'Mes trophées',Sport:'Mon sport',Achats:'Mes achats',Budget:'Mon budget','Réglages':'Mes réglages'};
+const TABS={Accueil:['🏡',vAccueil],Mois:['🗓️',vMois],Semaine:['📆',vSemaine],'To-do':['📝',vTodo],Focus:['🎯',vFocus],'Trophées':['🏆',vProgres],Sport:['💪',vSport],Achats:['🛍️',vAchats],Budget:['💶',vBudget],'Réglages':['💾',vReglages]};
 let turning=false;
 function go(t){if(t===tab){scrollTo(0,0);return}const keys=Object.keys(TABS),fwd=keys.indexOf(t)>keys.indexOf(tab),pg=document.getElementById('page');
   const anim=pg&&pg.cloneNode&&!turning&&!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -729,7 +726,7 @@ function snap(msg){const now=Date.now();if(now-lastSnap<400)return;lastSnap=now;
   el.innerHTML=`<span>${msg}</span><button onclick="undo()">Annuler</button>`;el.classList.add('show');clearTimeout(undoT);undoT=setTimeout(()=>{el.classList.remove('show');UNDO=null},6000)}
 function undo(){if(!UNDO)return;S=JSON.parse(UNDO);UNDO=null;save();const el=document.getElementById('toast');if(el)el.classList.remove('show');render()}
 function growPi(e){e.style.height='auto';e.style.height=Math.max(104,Math.ceil(e.scrollHeight/26)*26)+'px'}
-function render(){try{applySober()}catch(e){}try{const h=document.getElementById('ttl');if(h)h.textContent=(TITLES[tab]||'Daily Journal')}catch(e){}document.getElementById('tabs').innerHTML=Object.entries(TABS).map(([k,v],i)=>`<button class="tab t${i} ${k===tab?'on':''}" onclick="go('${k}')"><span class="ic">${v[0]}</span>${k}</button>`).join('');document.getElementById('app').innerHTML=TABS[tab][1]();try{document.querySelectorAll('.pi textarea').forEach(growPi)}catch(e){}foldify();try{document.querySelectorAll('.tlw').forEach(w=>{if(!w.offsetParent)return;w.scrollTop=(TLS&&TLS.ds===w.dataset.ds)?TLS.top:+w.dataset.start;TLS={ds:w.dataset.ds,top:w.scrollTop}})}catch(e){}}
+function render(){if(!TABS[tab])tab=tab==='Routines'?'To-do':'Accueil';try{applySober()}catch(e){}try{const h=document.getElementById('ttl');if(h)h.textContent=(tab==='Accueil'&&curDay!==TODAY()?'Ma journée':TITLES[tab]||'Daily Journal')}catch(e){}document.getElementById('tabs').innerHTML=Object.entries(TABS).map(([k,v],i)=>`<button class="tab t${i} ${k===tab?'on':''}" onclick="${k==='Accueil'?"if(curDay!==TODAY()){curDay=TODAY();if(tab==='Accueil')render()}":''}go('${k}')"><span class="ic">${v[0]}</span>${k}</button>`).join('');document.getElementById('app').innerHTML=TABS[tab][1]();try{document.querySelectorAll('.pi textarea').forEach(growPi)}catch(e){}foldify();try{document.querySelectorAll('.tlw').forEach(w=>{if(!w.offsetParent)return;w.scrollTop=(TLS&&TLS.ds===w.dataset.ds)?TLS.top:+w.dataset.start;TLS={ds:w.dataset.ds,top:w.scrollTop}})}catch(e){}}
 /* ☁️ Synchronisation Firebase : mêmes données sur le téléphone et l'iPad */
 // Configuration du projet Firebase (Console Firebase → Paramètres du projet → Vos applications → Config).
 const FB_CONFIG={apiKey:"AIzaSyAETyemut2x7qEMgSTIYZ_jqcxYLcqFE9U",authDomain:"daily-journal-2c3b0.firebaseapp.com",projectId:"daily-journal-2c3b0",
