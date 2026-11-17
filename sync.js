@@ -36,7 +36,7 @@ function listen(){const uid=SY.user.uid;
     if(r.device===DEV||R<=SY.last){if(R===SY.last&&!getBase())setBase(r.data);SY.last=Math.max(SY.last,R);lss('maSemaine_syncAt',SY.last);if(isDirty())push();syncUI();return}
     if(isDirty()&&(S._mt||0)>R){push(true);return}
     adopt(r)},e=>{SY.err=errMsg(e);syncUI()})}
-const dataSize=d=>((d&&d.tasks)||[]).length+Object.keys((d&&d.done)||{}).length+((d&&d.hist)||[]).length+((d&&d.bud&&d.bud.tx)||[]).length+((d&&d.weights)||[]).length+Object.keys((d&&d.sport)||{}).length;
+const dataSize=d=>((d&&d.tasks)||[]).length+Object.keys((d&&d.done)||{}).length+((d&&d.hist)||[]).length+((d&&d.bud&&d.bud.tx)||[]).length+((d&&d.weights)||[]).length+Object.keys((d&&d.sport)||{}).length+Object.keys((d&&d.men)||{}).length;
 function adopt(r,ok){let d;try{d=JSON.parse(r.data)}catch(e){return}
   /* Protection : un compte vide (sans remise à zéro volontaire) ne remplace jamais des données existantes */
   if(!ok&&dataSize(d)===0&&!d._reset&&dataSize(S)>0){save();push(true,true);return}

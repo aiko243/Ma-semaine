@@ -321,6 +321,35 @@ async def test_sport(b):
     check('aucune erreur JavaScript', not d.errors, d.errors)
 
 
+async def test_menage(b):
+    print('Calendrier ménage')
+    d = await Device.new(b, 'A')
+    await d.js("go('To-do')")
+    await d.wait(700)
+    txt = await d.js("document.getElementById('app').innerText")
+    check('le calendrier ménage est dans l’onglet To-do, ouvert', 'Calendrier ménage' in txt and await d.page.is_visible('.spd'))
+    await d.js("calTap('men',add(TODAY(),-1))")
+    await d.wait(300)
+    groups = await d.js("[...document.querySelectorAll('.spgb')].map(b=>b.textContent.replace(/\\d/g,'').trim())")
+    check('5 familles par pièce', len(groups) == 5 and 'Salle de bain' in groups[1], groups)
+    await d.page.click('.spgb[data-g="vie"]')
+    await d.page.click('input[name=sp_t][value="aspi"] + span')
+    await d.page.click('.spgb[data-g="sdb"]')
+    await d.page.click('input[name=sp_t][value="wc"] + span')
+    check('résumé du choix', await d.js("document.getElementById('sp_sum').textContent") == 'Choisi : 🛁 Toilettes · 🛋️ Aspirateur')
+    await d.page.click('#sheet >> text=Enregistrer')
+    await d.wait(400)
+    check('jour noté comme fait avec ses tâches', await d.js("[S.men[add(TODAY(),-1)],[...S.menInfo[add(TODAY(),-1)].t].sort()]") == ['d', ['aspi', 'wc']])
+    check('« il y a X jours » mis à jour', await d.js("[S.lastDone['aspirateur'],S.lastDone['toilettes']].every(x=>x===add(TODAY(),-1))"))
+    check('les puces « à prévoir » le reflètent', 'il y a 1 j' in await d.js("[...document.querySelectorAll('.mchip')].find(c=>c.innerText.includes('Aspirateur')).innerText"))
+    check('le sport n’est pas touché', await d.js("Object.keys(S.sport).length") == 0)
+    await d.js("calSet('men',TODAY(),'p',['vitres'])")
+    await d.js("go('Accueil')")
+    await d.wait(700)
+    check('l’accueil rappelle le ménage prévu', 'Ménage prévu aujourd' in await d.js("document.getElementById('app').innerText"))
+    check('aucune erreur JavaScript', not d.errors, d.errors)
+
+
 async def test_rappels(b):
     print('Rappels')
     d = await Device.new(b, 'A')
@@ -353,7 +382,7 @@ async def test_hors_ligne(b):
     await ctx.set_offline(False)
 
 
-TESTS = [test_onglets, test_fusion_unitaire, test_sync_base, test_sync_premiere_connexion, test_sync_fusion, test_sauvegardes, test_sauvegardes_bloquees, test_sport, test_rappels, test_hors_ligne]
+TESTS = [test_onglets, test_fusion_unitaire, test_sync_base, test_sync_premiere_connexion, test_sync_fusion, test_sauvegardes, test_sauvegardes_bloquees, test_sport, test_menage, test_rappels, test_hors_ligne]
 
 
 async def main(filt):

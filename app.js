@@ -34,6 +34,7 @@ if(!S.sub)S.sub={};if(!S.tpl)S.tpl=[];if(!S.lastDone)S.lastDone={};if(!S.wishCfg
 /* États propres à chaque appareil : ne voyagent plus avec la synchro */
 let FOLD=(()=>{try{return JSON.parse(localStorage.getItem('maSemaine_fold')||'null')}catch(e){return null}})();if(!FOLD){FOLD=S.fold||{};try{localStorage.setItem('maSemaine_fold',JSON.stringify(FOLD))}catch(e){}}
 const saveFold=()=>{try{localStorage.setItem('maSemaine_fold',JSON.stringify(FOLD))}catch(e){}};
+if(FOLD['men-cal']===undefined){FOLD['men-cal']=1;saveFold()}
 let NOTIF=(()=>{try{return JSON.parse(localStorage.getItem('maSemaine_notified')||'{}')}catch(e){return{}}})();
 /* Ménage des données qui grossissaient sans servir */
 delete S.fold;delete S.notified;
@@ -141,6 +142,7 @@ function vAccueil(){const ds=curDay,isT=ds===TODAY(),d=P(ds),all=tasksOn(ds),rt=
   <div class="bar" style="margin-top:14px"><i style="width:${pc}%"></i></div><div class="row mut" style="margin-top:6px"><span>${done}/${all.length} fait ${isT?'aujourd\'hui':'ce jour-là'}</span><span class="sp"></span><span>⭐ ${S.stars} étoiles</span></div></div>
   ${F.id&&S.tasks.some(x=>x.id==F.id)?`<div class="boost" style="margin:14px 0;display:flex;align-items:center;gap:10px"><span class="sp">🎯 ${esc(S.tasks.find(x=>x.id==F.id).title)}</span><button class="btn p" onclick="go('Focus')">Reprendre</button></div>`:''}
   ${isT?backupCard()+catAlerts():''}
+  ${isT&&S.men[ds]==='p'?`<div class="boost" style="margin:14px 0;display:flex;align-items:center;gap:10px"><span class="sp">🧹 Ménage prévu aujourd'hui${calLabel('men',ds)?' : '+esc(calLabel('men',ds)):''}</span><button class="btn p" onclick="calTap('men',TODAY(),'d')">C'est fait ✨</button></div>`:''}
   ${isT&&S.sport[ds]==='p'?`<div class="boost" style="margin:14px 0;display:flex;align-items:center;gap:10px"><span class="sp">🏋️ Sport prévu aujourd'hui</span><button class="btn p" onclick="sportToday()">C'est fait 💪</button></div>`:''}
   <div class="card"${FA('acc-rout',rt.length?`${rdone}/${rt.length} faites`+(rt.filter(t=>!isDone(t,ds)).length?' · reste : '+firstTitles(rt.filter(t=>!isDone(t,ds))):' · tout est fait 🎉'):'Pas de routine ce jour-là')}><div class="row"><h2 style="margin:0">☀️ Ma routine</h2><span class="sp"></span><span class="lbl">${rdone}/${rt.length}</span></div>
   <div style="margin-top:8px">${rt.map(t=>routineLine(t,ds)).join('')||'<p class="mut">Pas de routine ce jour-là.</p>'}</div>
@@ -235,6 +237,7 @@ function vTodo(){const td=TODAY(),one=S.tasks.filter(t=>!t.recur&&(!t.date||t.da
   return `<div class="card"${FA('todo-gen',sum(G,'Rien en attente'))}><div class="row"><h2 style="margin:0">📝 Ma to-do générale</h2><span class="sp"></span><button class="btn p" onclick="newTask()">+ Ajouter</button></div>
   <div class="mut">Tout ce que tu as à faire, avec ou sans date. Une tâche avec une date apparaît aussi dans ce jour-là, et inversement.</div>
   ${G.h||'<p class="mut">Rien en attente, bravo 🌷</p>'}</div>
+  ${menCard()}
   <div class="card"${FA('todo-men',M.n?M.n+' à faire'+(M.open.some(t=>t.dur)?' · environ '+M.open.reduce((a,t)=>a+(t.dur||0),0)+' min':'')+' · '+firstTitles(M.open):'Rien à faire côté ménage')}><div class="row"><h2 style="margin:0">🧹 To-do ménage</h2><span class="sp"></span><button class="btn p" onclick="newTask({cat:'Maison'})">+ Ajouter</button></div>
   <div class="mut">Tes tâches de la maison, avec ou sans date. L'appli retient quand tu as fait chaque chose.</div>
   <div class="fl" style="margin-top:10px">À prévoir, du plus urgent au moins urgent</div><div class="mchips">${menageChips(have)}</div><div class="mut" style="margin:4px 0 6px">« + » l'ajoute à ta liste, « ✓ » note que tu viens de le faire. Ce qui est en rose commence à dater.</div>
@@ -288,49 +291,78 @@ function vProgres(){const nd=Object.keys(S.done).length,wc=weekCounts(8);
 
 /* Sport : un simple calendrier. Chaque jour peut être « prévu » (p) ou « fait » (d), rangé dans S.sport[date]. */
 if(!S.sport)S.sport={};
-let sportMonth=TODAY().slice(0,7);
 function sportDone(w){let c=0;for(let j=0;j<7;j++){const ds=add(w,j);if(S.sport[ds]==='d')c++;S.tasks.forEach(t=>{if(t.cat==='Sport'&&isDone(t,ds))c++})}return c+(S.sess[w]||0)}
 function sportPlanned(w){let c=0;for(let j=0;j<7;j++){const ds=add(w,j);if(S.sport[ds]==='p'&&ds>=TODAY())c++}return c}
-/* toucher un jour : passé → fait / vide ; aujourd'hui → prévu / fait / vide ; futur → prévu / vide */
-if(!S.sportInfo)S.sportInfo={};
-/* Types de séance rangés par famille (les clés déjà utilisées restent valables) */
+/* ---------- Calendriers « prévu / fait » réutilisables : sport et ménage ----------
+   Jour : S[cal.st][date] = 'p' (prévu) ou 'd' (fait) ; détails : S[cal.info][date] = {t:[types], n:'note'} */
+if(!S.sportInfo)S.sportInfo={};if(!S.men)S.men={};if(!S.menInfo)S.menInfo={};
 const SPORT_G=[
   {k:'muscu',e:'🏋️',n:'Muscu',items:[['full','Full body'],['haut','Haut du corps'],['bas','Bas du corps'],['pecs','Pecs'],['dos','Dos'],['epaules','Épaules'],['bras','Bras'],['jambes','Jambes'],['fess','Fessiers'],['abdo','Abdos']]},
   {k:'cardio',e:'🏃‍♀️',n:'Cardio',items:[['course','Course'],['cardio','Cardio en salle'],['velo','Vélo'],['nage','Natation'],['marche','Marche']]},
   {k:'doux',e:'✨',n:'Autre',items:[['etir','Étirements']]}];
-const sportGroupOf=k=>SPORT_G.find(g=>g.items.some(x=>x[0]===k));
-const sportEmo=ds=>{const g=sportGroupOf(((S.sportInfo[ds]||{}).t||[])[0]);return g?g.e:'💪'};
-const sportLabel=ds=>{const i=S.sportInfo[ds]||{},t=i.t||[],l=[];
-  SPORT_G.forEach(g=>{const n=g.items.filter(x=>t.includes(x[0])).map(x=>x[1]);if(n.length)l.push(g.e+' '+n.join(', '))});if(i.n)l.push(i.n);return l.join(' · ')};
-/* état d'un jour : 'p' prévu, 'd' fait ; type(s) et note facultatifs */
-function sportSet(ds,st,types,note){const cur=S.sport[ds];
+/* 3e valeur : nom de la tâche de la to-do ménage dont on met à jour « fait il y a X jours » */
+const MEN_G=[
+  {k:'cuisine',e:'🍳',n:'Cuisine',items:[['plan','Plan de travail','Cuisine & plan de travail'],['vaiss','Vaisselle'],['frigo','Frigo','Nettoyer le frigo'],['four','Four / micro-ondes'],['solc','Sol de la cuisine']]},
+  {k:'sdb',e:'🛁',n:'Salle de bain',items:[['douche','Douche / baignoire','Salle de bain'],['lavabo','Lavabo','Salle de bain'],['wc','Toilettes','Toilettes'],['miroir','Miroirs']]},
+  {k:'vie',e:'🛋️',n:'Pièces de vie',items:[['aspi','Aspirateur','Aspirateur'],['serp','Serpillière','Serpillière'],['pouss','Poussière','Poussière'],['vitres','Vitres','Vitres'],['salon','Ranger le salon','Ranger le salon'],['chambre','Ranger la chambre','Ranger la chambre']]},
+  {k:'linge',e:'🧺',n:'Linge',items:[['lessive','Lessive'],['plier','Étendre / plier'],['draps','Changer les draps','Changer les draps'],['repass','Repassage']]},
+  {k:'autre',e:'✨',n:'Autre',items:[['poub','Poubelles','Sortir les poubelles'],['litiere','Litière'],['plantes','Plantes']]}];
+const CALS={
+  sport:{st:'sport',info:'sportInfo',G:SPORT_G,def:'💪',kind:'Type de séance',ph:'ex : 5 km, séance courte…'},
+  men:{st:'men',info:'menInfo',G:MEN_G,def:'🧹',kind:'Ce que tu as fait / vas faire',ph:'ex : grand ménage, invités samedi…',
+    onDone:(ds,t)=>t.forEach(k=>{const it=MEN_G.flatMap(g=>g.items).find(x=>x[0]===k);if(it&&it[2]){const kk=it[2].toLowerCase();if(!S.lastDone[kk]||S.lastDone[kk]<ds)S.lastDone[kk]=ds}})}};
+let calMonth={sport:TODAY().slice(0,7),men:TODAY().slice(0,7)},CUR_CAL='sport';
+const calGroupOf=(c,k)=>CALS[c].G.find(g=>g.items.some(x=>x[0]===k));
+const calEmo=(c,ds)=>{const g=calGroupOf(c,((S[CALS[c].info][ds]||{}).t||[])[0]);return g?g.e:CALS[c].def};
+const calLabel=(c,ds)=>{const i=S[CALS[c].info][ds]||{},t=i.t||[],l=[];
+  CALS[c].G.forEach(g=>{const n=g.items.filter(x=>t.includes(x[0])).map(x=>x[1]);if(n.length)l.push(g.e+' '+n.join(', '))});if(i.n)l.push(i.n);return l.join(' · ')};
+function calSet(c,ds,st,types,note){const C=CALS[c],M=S[C.st],I=S[C.info],cur=M[ds];
   if(st==='d'&&cur!=='d')S.stars++;if(cur==='d'&&st!=='d')S.stars=Math.max(0,S.stars-1);
-  if(st)S.sport[ds]=st;else delete S.sport[ds];
+  if(st)M[ds]=st;else delete M[ds];
   const info={};if(st&&types&&types.length)info.t=types;if(st&&note)info.n=note;
-  if(Object.keys(info).length)S.sportInfo[ds]=info;else delete S.sportInfo[ds];save();render()}
-function sportTap(ds,force){const td=TODAY(),cur=force||S.sport[ds]||(ds<=td?'d':'p'),info=S.sportInfo[ds]||{},sel=info.t||[],open=(sportGroupOf(sel[0])||SPORT_G[0]).k;
+  if(Object.keys(info).length)I[ds]=info;else delete I[ds];
+  if(st==='d'&&C.onDone)C.onDone(ds,types||[]);save();render()}
+/* toucher un jour ouvre sa fiche : jour passé ou aujourd'hui → « Fait » proposé, jour à venir → « Prévu » */
+function calTap(c,ds,force){CUR_CAL=c;const C=CALS[c],td=TODAY(),cur=force||S[C.st][ds]||(ds<=td?'d':'p'),info=S[C.info][ds]||{},sel=info.t||[],open=(calGroupOf(c,sel[0])||C.G[0]).k;
   openSheet(`<h3 style="text-transform:capitalize">${fr(ds)}</h3>
-  <div class="chips"><label class="chip"><input type="radio" name="sp_st" value="p" ${cur==='p'?'checked':''}><span>🗓️ Prévu</span></label><label class="chip"><input type="radio" name="sp_st" value="d" ${cur==='d'?'checked':''}><span>💪 Fait</span></label></div>
-  <span class="fl">Type de séance (facultatif)</span>
-  <div class="spg">${SPORT_G.map(g=>`<button type="button" class="spgb ${g.k===open?'on':''}" data-g="${g.k}" onclick="spGroup('${g.k}')">${g.e} ${g.n}<i id="spc_${g.k}"></i></button>`).join('')}</div>
-  ${SPORT_G.map(g=>`<div class="chips spp" data-g="${g.k}" style="${g.k===open?'':'display:none'}">${g.items.map(([k,n])=>`<label class="chip"><input type="checkbox" name="sp_t" value="${k}" ${sel.includes(k)?'checked':''} onchange="spCount()"><span>${n}</span></label>`).join('')}</div>`).join('')}
+  <div class="chips"><label class="chip"><input type="radio" name="sp_st" value="p" ${cur==='p'?'checked':''}><span>🗓️ Prévu</span></label><label class="chip"><input type="radio" name="sp_st" value="d" ${cur==='d'?'checked':''}><span>${C.def} Fait</span></label></div>
+  <span class="fl">${C.kind} (facultatif)</span>
+  <div class="spg">${C.G.map(g=>`<button type="button" class="spgb ${g.k===open?'on':''}" data-g="${g.k}" onclick="spGroup('${g.k}')">${g.e} ${g.n}<i id="spc_${g.k}"></i></button>`).join('')}</div>
+  ${C.G.map(g=>`<div class="chips spp" data-g="${g.k}" style="${g.k===open?'':'display:none'}">${g.items.map(([k,n])=>`<label class="chip"><input type="checkbox" name="sp_t" value="${k}" ${sel.includes(k)?'checked':''} onchange="spCount()"><span>${n}</span></label>`).join('')}</div>`).join('')}
   <div class="mut" id="sp_sum" style="margin-top:8px;min-height:18px"></div>
-  <span class="fl">Note (facultatif)</span><input id="sp_n" value="${esc(info.n||'')}" placeholder="ex : 5 km, séance courte…">
-  <div class="fbtns">${S.sport[ds]?`<button class="btn d" onclick="closeSheet();sportSet('${ds}','')">Effacer</button>`:''}<button class="btn" onclick="closeSheet()">Annuler</button><button class="btn p" onclick="sportSave('${ds}')">Enregistrer</button></div>`);spCount()}
+  <span class="fl">Note (facultatif)</span><input id="sp_n" value="${esc(info.n||'')}" placeholder="${C.ph}">
+  <div class="fbtns">${S[C.st][ds]?`<button class="btn d" onclick="closeSheet();calSet('${c}','${ds}','')">Effacer</button>`:''}<button class="btn" onclick="closeSheet()">Annuler</button><button class="btn p" onclick="calSave('${c}','${ds}')">Enregistrer</button></div>`);spCount()}
 function spGroup(k){document.querySelectorAll('.spgb').forEach(b=>b.classList.toggle('on',b.dataset.g===k));document.querySelectorAll('.spp').forEach(p=>p.style.display=p.dataset.g===k?'':'none')}
 function spCount(){const t=[...document.querySelectorAll('input[name="sp_t"]:checked')].map(x=>x.value),l=[];
-  SPORT_G.forEach(g=>{const n=g.items.filter(x=>t.includes(x[0])).map(x=>x[1]),c=document.getElementById('spc_'+g.k);if(c)c.textContent=n.length?' '+n.length:'';if(n.length)l.push(g.e+' '+n.join(', '))});
+  CALS[CUR_CAL].G.forEach(g=>{const n=g.items.filter(x=>t.includes(x[0])).map(x=>x[1]),c=document.getElementById('spc_'+g.k);if(c)c.textContent=n.length?' '+n.length:'';if(n.length)l.push(g.e+' '+n.join(', '))});
   const el=document.getElementById('sp_sum');if(el)el.textContent=l.length?'Choisi : '+l.join(' · '):''}
-function sportSave(ds){const st=$r('sp_st')||'d',t=[...document.querySelectorAll('input[name="sp_t"]:checked')].map(x=>x.value),n=$v('sp_n').trim();closeSheet();sportSet(ds,st,t,n)}
-function sportToday(){sportTap(TODAY(),'d')}
-function shiftSport(n){const[y,m]=sportMonth.split('-').map(Number);sportMonth=iso(new Date(y,m-1+n,1)).slice(0,7);render()}
-function sportCal(){const[y,m]=sportMonth.split('-').map(Number),start=monday(iso(new Date(y,m-1,1))),td=TODAY(),cells=[];
-  for(let i=0;i<42;i++){const ds=add(start,i),st=S.sport[ds],out=ds.slice(0,7)!==sportMonth,miss=st==='p'&&ds<td;
+function calSave(c,ds){const st=$r('sp_st')||'d',t=[...document.querySelectorAll('input[name="sp_t"]:checked')].map(x=>x.value),n=$v('sp_n').trim();closeSheet();calSet(c,ds,st,t,n)}
+function shiftCal(c,n){const[y,m]=calMonth[c].split('-').map(Number);calMonth[c]=iso(new Date(y,m-1+n,1)).slice(0,7);render()}
+function calGrid(c){const C=CALS[c],M=S[C.st],mo=calMonth[c],[y,m]=mo.split('-').map(Number),start=monday(iso(new Date(y,m-1,1))),td=TODAY(),cells=[];
+  for(let i=0;i<42;i++){const ds=add(start,i),st=M[ds],out=ds.slice(0,7)!==mo,miss=st==='p'&&ds<td;
     if(i===35&&out)break;
-    cells.push(`<button class="spd ${out?'out':''} ${ds===td?'today':''} ${st==='d'?'done':st==='p'?(miss?'miss':'plan'):''}" onclick="sportTap('${ds}')" aria-label="${fr(ds)}${st==='d'?', fait':st==='p'?', prévu':''}"><b>${P(ds).getDate()}</b><span>${st==='d'?sportEmo(ds):st==='p'?(miss?'·':'🗓️'):''}</span></button>`)}
-  return `<div class="row"><button class="btn" onclick="shiftSport(-1)" aria-label="Mois précédent">‹</button><span class="sp" style="text-align:center;font-weight:700;text-transform:capitalize">${MOIS[m-1]} ${y}</span><button class="btn" onclick="shiftSport(1)" aria-label="Mois suivant">›</button></div>
+    cells.push(`<button class="spd ${out?'out':''} ${ds===td?'today':''} ${st==='d'?'done':st==='p'?(miss?'miss':'plan'):''}" onclick="calTap('${c}','${ds}')" aria-label="${fr(ds)}${st==='d'?', fait':st==='p'?', prévu':''}"><b>${P(ds).getDate()}</b><span>${st==='d'?calEmo(c,ds):st==='p'?(miss?'·':'🗓️'):''}</span></button>`)}
+  return `<div class="row"><button class="btn" onclick="shiftCal('${c}',-1)" aria-label="Mois précédent">‹</button><span class="sp" style="text-align:center;font-weight:700;text-transform:capitalize">${MOIS[m-1]} ${y}</span><button class="btn" onclick="shiftCal('${c}',1)" aria-label="Mois suivant">›</button></div>
   <div class="grid7" style="margin-top:10px">${['L','M','M','J','V','S','D'].map(x=>`<div class="mut" style="text-align:center">${x}</div>`).join('')}${cells.join('')}</div>
-  <div class="row mut" style="justify-content:center;gap:14px;margin-top:10px;font-size:12px"><span>🗓️ prévu</span><span>💪 fait</span><span>Touche un jour pour noter</span></div>`}
+  <div class="row mut" style="justify-content:center;gap:14px;margin-top:10px;font-size:12px"><span>🗓️ prévu</span><span>${C.def} fait</span><span>Touche un jour pour noter</span></div>`}
+/* dernières entrées (faites, ou prévues à venir) */
+function calList(c,max){const C=CALS[c],M=S[C.st];return Object.keys(M).filter(d=>M[d]==='d'||d>=TODAY()).sort().reverse().slice(0,max)}
+function calRows(c,l){return l.map(d=>`<button class="op" onclick="calTap('${c}','${d}')"><span class="opi">${S[CALS[c].st][d]==='d'?calEmo(c,d):'🗓️'}</span><span class="sp"><b style="text-transform:capitalize">${P(d).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'short'})}</b><small>${S[CALS[c].st][d]==='d'?'Fait':'Prévu'}${calLabel(c,d)?' · '+esc(calLabel(c,d)):''}</small></span></button>`).join('')}
+/* Sport : raccourcis vers le calendrier générique */
+const sportGroupOf=k=>calGroupOf('sport',k),sportEmo=ds=>calEmo('sport',ds),sportLabel=ds=>calLabel('sport',ds);
+function sportSet(ds,st,t,n){calSet('sport',ds,st,t,n)}
+function sportTap(ds,force){calTap('sport',ds,force)}
+function sportSave(ds){calSave('sport',ds)}
+function sportToday(){calTap('sport',TODAY(),'d')}
+function shiftSport(n){shiftCal('sport',n)}
+function sportCal(){return calGrid('sport')}
+/* Ménage : carte du calendrier dans l'onglet To-do */
+function menCard(){const wk=monday(TODAY()),td=TODAY();let d=0,p=0;for(let j=0;j<7;j++){const x=add(wk,j);if(S.men[x]==='d')d++;else if(S.men[x]==='p'&&x>=td)p++}
+  const l=calList('men',5);
+  return `<div class="card"${FA('men-cal',(d?`${d} jour${d>1?'s':''} de ménage cette semaine`:'Pas encore de ménage noté cette semaine')+(p?` · ${p} prévu${p>1?'s':''}`:''))}><h2>🧹 Calendrier ménage</h2>
+  <div class="mut">${d} jour${d>1?'s':''} de ménage cette semaine${p?` · ${p} prévu${p>1?'s':''}`:''}. Ce que tu notes comme fait met aussi à jour « il y a X jours » plus bas.</div>
+  <div style="margin-top:12px">${calGrid('men')}</div>
+  ${l.length?`<div class="fl" style="margin-top:14px">Dernières entrées</div>${calRows('men',l)}`:''}</div>`}
 function vSport(){const wk=monday(TODAY()),n=sportDone(wk),pl=sportPlanned(wk),ws=[...S.weights].sort((a,b)=>a.d<b.d?-1:1);
   let svg='';if(ws.length>1){const v=ws.map(w=>w.kg),mn=Math.min(...v)-1,mx=Math.max(...v)+1;const pts=ws.map((w,i)=>`${i/(ws.length-1)*300},${110-(w.kg-mn)/(mx-mn)*100}`).join(' ');
     svg=`<svg viewBox="-5 0 310 120" style="width:100%;margin-top:10px"><defs><linearGradient id="g"><stop offset="0" stop-color="#f2a7c3"/><stop offset="1" stop-color="#c9b3f5"/></linearGradient></defs><polyline points="${pts}" fill="none" stroke="url(#g)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>${ws.map((w,i)=>`<circle cx="${i/(ws.length-1)*300}" cy="${110-(w.kg-mn)/(mx-mn)*100}" r="4" fill="#c9b3f5"/>`).join('')}</svg>`}
@@ -341,7 +373,7 @@ function vSport(){const wk=monday(TODAY()),n=sportDone(wk),pl=sportPlanned(wk),w
   <div class="bar" style="margin-top:10px"><i style="width:${Math.min(100,n/S.goal*100)}%"></i></div>
   <div style="margin-top:14px">${sportCal()}</div>
   <button class="btn s" style="margin-top:12px" onclick="goalForm()">Changer l'objectif</button></div>
-  ${(()=>{const l=Object.keys(S.sport).filter(d=>S.sport[d]==='d'||d>=TODAY()).sort().reverse().slice(0,10);return `<div class="card"${FA('sp-list',l.length?l.slice(0,2).map(d=>P(d).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric'})+' '+(sportLabel(d)||'séance')).join(' · '):'Aucune séance notée')}><h2>📝 Historique</h2>${l.map(d=>`<button class="op" onclick="sportTap('${d}')"><span class="opi">${S.sport[d]==='d'?sportEmo(d):'🗓️'}</span><span class="sp"><b style="text-transform:capitalize">${P(d).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'short'})}</b><small>${S.sport[d]==='d'?'Fait':'Prévu'}${sportLabel(d)?' · '+esc(sportLabel(d)):''}</small></span></button>`).join('')||'<p class="mut">Touche un jour du calendrier pour noter une séance.</p>'}</div>`})()}
+  ${(()=>{const l=calList('sport',10);return `<div class="card"${FA('sp-list',l.length?l.slice(0,2).map(d=>P(d).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric'})+' '+(sportLabel(d)||'séance')).join(' · '):'Aucune séance notée')}><h2>📝 Historique</h2>${calRows('sport',l)||'<p class="mut">Touche un jour du calendrier pour noter une séance.</p>'}</div>`})()}
   <div class="card"${FA('sp-hist',(t=>t+' séance'+(t>1?'s':'')+' ces 8 dernières semaines')(sw.reduce((a,x)=>a+x[1],0)))}><h2>📈 8 dernières semaines</h2>${chart(sw,w=>P(w).getDate()+'/'+(P(w).getMonth()+1))}</div>
   <div class="card"${FA('sp-poids',ws.length?`Dernier : ${String(ws[ws.length-1].kg).replace('.',',')} kg`+(diff!==null?` · ${diff>0?'+':''}${String(diff).replace('.',',')} kg depuis le début`:''):'Aucune pesée')}><div class="row"><h2 style="margin:0">⚖️ Mon poids</h2><span class="sp"></span><button class="btn p" onclick="addWeight()">+ Ajouter</button></div>
   ${ws.length?`<div class="mut">Dernier : <b>${ws[ws.length-1].kg} kg</b>${diff!==null?` · ${diff>0?'+':''}${diff} kg depuis le début`:''}</div>`:'<p class="mut">Ajoute ta première pesée.</p>'}${svg}
