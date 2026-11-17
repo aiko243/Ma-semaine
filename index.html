@@ -749,14 +749,14 @@ async function syncLogin(create){const em=syncVal('sy_em').trim(),pw=syncVal('sy
   try{await(create?Au.createUserWithEmailAndPassword:Au.signInWithEmailAndPassword)(auth,em,pw)}catch(e){SY.err=errMsg(e)}SY.busy=false;syncUI()}
 async function syncForgot(){const em=syncVal('sy_em').trim();if(!em){SY.err='Écris ton e-mail, puis touche « Mot de passe oublié ».';syncUI();return}
   try{await SY.fb.Au.sendPasswordResetEmail(SY.fb.auth,em);alert('E-mail envoyé 💌 Regarde ta boîte de réception (et les spams).')}catch(e){SY.err=errMsg(e);syncUI()}}
-function syncOut(){openSheet(`<h3>Se déconnecter ?</h3><div class="mut">Tu es connecté·e avec <b>${esc((SY.user&&SY.user.email)||'')}</b>.</div>
+function syncOut(){openSheet(`<div style="text-align:center"><h3>Se déconnecter ?</h3><div class="mut">Tu es connecté·e avec <b>${esc((SY.user&&SY.user.email)||'')}</b>.</div>
   <div class="mut" style="margin-top:8px">Tes données restent sur cet appareil, mais elles ne se synchroniseront plus avec tes autres appareils.</div>
-  <div class="fbtns"><button class="btn" onclick="closeSheet()">Annuler</button><button class="btn d" onclick="syncOutGo()">Se déconnecter</button></div>`)}
+  <div class="fbtns" style="justify-content:center"><button class="btn" style="flex:1" onclick="closeSheet()">Annuler</button><button class="btn d" style="flex:1" onclick="syncOutGo()">Se déconnecter</button></div></div>`)}
 async function syncOutGo(){lss('maSemaine_syncUid',null);let ok=true;try{await SY.fb.Au.signOut(SY.fb.auth)}catch(e){ok=false}
-  openSheet(ok?`<h3>Déconnecté·e ✓</h3><div class="mut">Tu es bien déconnecté·e. Tes données sont toujours sur cet appareil.</div>
+  openSheet(ok?`<div style="text-align:center"><h3>Déconnecté·e ✓</h3><div class="mut">Tu es bien déconnecté·e. Tes données sont toujours sur cet appareil.</div>
   <div class="mut" style="margin-top:8px">Pour synchroniser de nouveau, reconnecte-toi dans Réglages → Synchronisation.</div>
-  <div class="fbtns"><button class="btn p" style="flex:1" onclick="closeSheet()">OK</button></div>`
-  :`<h3>Oups</h3><div class="mut">La déconnexion n’a pas marché. Réessaie dans un instant.</div><div class="fbtns"><button class="btn p" style="flex:1" onclick="closeSheet()">OK</button></div>`)}
+  <div class="fbtns"><button class="btn p" style="flex:1" onclick="closeSheet()">OK</button></div></div>`
+  :`<div style="text-align:center"><h3>Oups</h3><div class="mut">La déconnexion n’a pas marché. Réessaie dans un instant.</div><div class="fbtns"><button class="btn p" style="flex:1" onclick="closeSheet()">OK</button></div></div>`)}
 function syncInner(){const t=SY.last?new Date(SY.last).toLocaleString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'jamais';let h='<h2>☁️ Synchronisation</h2>';
   if(SY.st==='off')h+='<div class="mut">Pas encore configurée : il manque la configuration Firebase dans l’appli.</div>';
   else if(SY.st==='load')h+='<div class="mut">Connexion au serveur…</div>';
