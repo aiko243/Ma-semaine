@@ -757,12 +757,14 @@ function syncInner(){const t=SY.last?new Date(SY.last).toLocaleString('fr-FR',{d
   else if(SY.st==='err')h+=`<div class="mut">${esc(SY.err)}</div><button class="btn" style="margin-top:8px" onclick="SY.st='load';syncUI();syncInit()">Réessayer</button>`;
   else if(SY.st==='out')h+=`<div class="mut">Connecte-toi avec le même compte sur ton téléphone et ton iPad : tes données se mettent à jour toutes seules.</div>
   <span class="fl">E-mail</span><input id="sy_em" type="email" autocomplete="username" autocapitalize="off">
-  <span class="fl">Mot de passe</span><input id="sy_pw" type="password" autocomplete="current-password">
+  <span class="fl">Mot de passe</span><div class="row" style="gap:6px;flex-wrap:nowrap"><input id="sy_pw" type="${SY.showPw?'text':'password'}" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" style="flex:1;min-width:0">
+  <button type="button" class="btn s" onclick="syncTogglePw()" aria-label="${SY.showPw?'Masquer':'Afficher'} le mot de passe" title="${SY.showPw?'Masquer':'Afficher'} le mot de passe">${SY.showPw?'🙈':'👁️'}</button></div>
   <div class="row" style="margin-top:10px"><button class="btn p" onclick="syncLogin(false)"${SY.busy?' disabled':''}>Se connecter</button><button class="btn" onclick="syncLogin(true)"${SY.busy?' disabled':''}>Créer mon compte</button></div>
   <button class="btn s" style="margin-top:8px" onclick="syncForgot()">Mot de passe oublié ?</button>`;
   else h+=`<div class="mut">Connecté·e : <b>${esc(SY.user.email||'')}</b></div><div class="mut">${SY.busy?'Envoi en cours…':isDirty()?'Modifications en attente d’envoi':'✅ À jour'} · dernière synchro : ${t}</div>
   <div class="row" style="margin-top:10px"><button class="btn" onclick="push(true)">Synchroniser maintenant</button><button class="btn s" onclick="syncOut()">Se déconnecter</button></div>`;
   if(SY.err&&SY.st!=='err')h+=`<div class="alert" style="margin-top:10px">${esc(SY.err)}</div>`;return h}
+function syncTogglePw(){SY.showPw=!SY.showPw;syncUI();const el=document.getElementById('sy_pw');if(el){el.focus();try{const n=el.value.length;el.setSelectionRange(n,n)}catch(e){}}}
 const syncCard=()=>`<div class="card" id="syncCard">${syncInner()}</div>`;
 function syncUI(){const el=document.getElementById('syncCard');
   if(el){const v=[syncVal('sy_em'),syncVal('sy_pw')];el.innerHTML=syncInner();const e2=document.getElementById('sy_em'),p2=document.getElementById('sy_pw');if(e2&&v[0])e2.value=v[0];if(p2&&v[1])p2.value=v[1]}
