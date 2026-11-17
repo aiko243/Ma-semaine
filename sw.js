@@ -2,7 +2,7 @@
 // - Fichiers de l'appli : réseau d'abord (toujours la dernière version), copie locale si pas de réseau.
 // - Polices et bibliothèques Firebase (adresses versionnées) : copie locale d'abord.
 // - Les échanges avec le serveur de synchro ne passent jamais par ici.
-const CACHE = 'dj-v1';
+const CACHE = 'dj-v2';
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil((async () => {
@@ -22,7 +22,10 @@ self.addEventListener('fetch', e => {
       const cache = await caches.open(CACHE);
       try {
         const net = await Promise.race([
-          fetch(req),
+          // revalide toujours auprès de GitHub : jamais de mélange ancienne/nouvelle version
+          fetch(req.mode === 'navigate'
+            ? new Request(req.url, { cache: 'no-cache', credentials: 'same-origin' })
+            : new Request(req, { cache: 'no-cache' })),
           new Promise((_, rej) => setTimeout(() => rej(new Error('lent')), 4000))
         ]);
         if (net && net.ok) cache.put(req, net.clone());
