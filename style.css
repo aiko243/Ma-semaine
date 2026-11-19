@@ -293,3 +293,12 @@ body.sober .ins{background:#2f2a32}body.sober .pix i{background:#332d36}body.sob
 .mrdv{display:flex;gap:2px;flex-wrap:wrap;margin-top:3px}.mrdv i{width:7px;height:7px;border-radius:50%;display:block;background:#c9b3f5}
 .mrdv i.cat-Perso{background:#b89bf0}.mrdv i.cat-Maison{background:#ee8fb4}.mrdv i.cat-Administratif{background:#8fa9ea}.mrdv i.cat-Sport{background:#79c79b}.mrdv i.cat-Chat{background:#f0b45e}
 .rdv .rh b{display:block;font-size:16px;line-height:1}.rdv .rh small{display:block;font-size:10.5px;font-weight:600;text-transform:capitalize}
+/* Mois coloré par l'humeur */
+.mday.hasmo{border-color:transparent}.mday.hasmo b{color:#3a2f3d}.mday.hasmo.today{border-color:#3a2f3d55}
+body.sober .mday.hasmo{border-color:transparent;filter:saturate(.75) brightness(.85)}body.sober .mday.hasmo b{color:#1d1a1f}
+/* Bilan de la semaine */
+.bweek{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:12px}
+.bweek div{border-radius:12px;background:#f5edf2;padding:6px 0;display:flex;flex-direction:column;align-items:center;gap:2px}
+.bweek small{font-size:10.5px;font-weight:700;color:#6d5a66;text-transform:capitalize}.bweek span{font-size:20px;line-height:1.1}
+body.sober .bweek div{background:#332d36}body.sober .bweek div[style] small{color:#1d1a1f}
+.ph>div:last-child{min-width:0}.ph .wd{font-size:clamp(32px,9.5vw,48px)}
